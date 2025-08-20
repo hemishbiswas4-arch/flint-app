@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { Lock, Unlock, MapPin, Users, Clock, IndianRupee, Sparkles, ExternalLink, ArrowLeft } from 'lucide-react';
-import styles from './Home.module.css'; // Make sure this filename matches your CSS file
+// FIXED: Removed unused 'Users' and 'Clock'
+import { Lock, Unlock, MapPin, IndianRupee, Sparkles, ExternalLink, ArrowLeft } from 'lucide-react';
+import styles from './Home.module.css';
 
 // --- TYPES ---
 type ItineraryStop = { name: string; description: string; category: string; locked: boolean; lat: number; lng: number; placeId: string; };
@@ -123,14 +124,21 @@ export default function Home() {
       });
       if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'AI generation failed'); }
       const responseData = await response.json();
-      const validStops: ItineraryStop[] = responseData.stops.filter((stop: any) => typeof stop.lat === 'number' && typeof stop.lng === 'number');
+
+      // FIXED: Defined a more specific type for the incoming stops
+      const validStops: ItineraryStop[] = responseData.stops.filter((stop: { lat: number; lng: number }) => typeof stop.lat === 'number' && typeof stop.lng === 'number');
+
       setItinerary(validStops);
       const newSeen = new Set(seenPlaces);
       validStops.forEach(stop => newSeen.add(stop.name));
       setSeenPlaces(Array.from(newSeen));
       setView('itinerary');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) { // FIXED: Changed type from 'any' to the more general 'unknown'
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred.");
+      }
     } finally {
       setLoading(false);
     }
