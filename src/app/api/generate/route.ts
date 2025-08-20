@@ -1,0 +1,233 @@
+// Location: src/app/api/generate/route.ts
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// --- TYPES ---
+type Category = 'Food' | 'Activity' | 'Sightseeing' | 'Entertainment' | 'Shopping' | 'Other';
+
+interface Stop {
+  name: string;
+  description: string;
+  category: Category;
+  locked: boolean;
+  lat: number;
+  lng: number;
+  placeId: string;
+}
+
+interface ItineraryRequest {
+  location: { name: string; lat: number; lng: number; };
+  radius: number;
+  groupType: string;
+  duration: string;
+  budget: string;
+  theme: string;
+  currentItinerary: Stop[];
+  seenPlaces: string[];
+}
+
+interface NewGooglePlace {
+    id: string;
+    displayName: { text: string };
+    types: string[];
+    priceLevel?: string;
+    location: { latitude: number; longitude: number; };
+    rating?: number;
+    userRatingCount?: number;
+}
+
+// --- HELPER FUNCTIONS ---
+
+function mapGoogleTypeToCategory(types: string[]): Category {
+    if (types.includes('restaurant') || types.includes('cafe') || types.includes('bar') || types.includes('bakery')) return 'Food';
+    if (types.includes('tourist_attraction') || types.includes('museum') || types.includes('park') || types.includes('art_gallery')) return 'Sightseeing';
+    if (types.includes('movie_theater') || types.includes('bowling_alley') || types.includes('night_club') || types.includes('amusement_park')) return 'Entertainment';
+    if (types.includes('shopping_mall') || types.includes('store') || types.includes('book_store') || types.includes('clothing_store')) return 'Shopping';
+    if (types.includes('gym') || types.includes('spa') || types.includes('stadium') || types.includes('dance_school') || types.includes('fitness_center')) return 'Activity';
+    return 'Other';
+}
+
+function getDynamicQuery(theme: string): string {
+    const themeVariations: { [key: string]: string[] } = {
+        'Sporty': ['active fun', 'sports activities', 'energetic games', 'places for a workout'],
+        'Picnic': ['scenic picnic spots', 'parks with open lawns', 'peaceful outdoor areas for a picnic'],
+        'Cozy': ['warm and comfortable cafes', 'relaxing quiet spots', 'intimate lounges', 'charming bookstores'],
+        'Artsy': ['art galleries and museums', 'creative spaces', 'cultural spots', 'indie movie theaters'],
+        'Luxe': ['luxury experiences', 'high-end dining', 'premium lounges', 'upscale shopping'],
+        'Coffee Crawl': ['best coffee shops', 'unique cafes', 'specialty coffee roasters', 'third-wave coffee houses']
+    };
+    const variations = themeVariations[theme] || [theme];
+    return variations[Math.floor(Math.random() * variations.length)];
+}
+
+
+// --- GOOGLE APIS ---
+
+async function getPlacesFromGoogle(lat: number, lng: number, radius: number, dynamicThemeQuery: string, locationName: string): Promise<{ places: NewGooglePlace[] }> {
+    const PLACES_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+    if (!PLACES_API_KEY) throw new Error("Google Maps API key is not configured on the server.");
+    
+    const textQuery = `${dynamicThemeQuery} in ${locationName}`;
+    console.log(`Querying Google Places with: "${textQuery}"`);
+
+    const url = 'https://places.googleapis.com/v1/places:searchText';
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': PLACES_API_KEY,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.types,places.priceLevel,places.location,places.rating,places.userRatingCount',
+    };
+    const body = JSON.stringify({ textQuery, maxResultCount: 20, locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: radius * 1000 } } });
+
+    try {
+        const response = await fetch(url, { method: 'POST', headers, body });
+        if (!response.ok) {
+            const errorBody = await response.json();
+            console.error("Google Places API Error:", JSON.stringify(errorBody, null, 2));
+            throw new Error(`Google Places API request failed with status ${response.status}`);
+        }
+        const data = await response.json();
+        const places = data.places || [];
+        
+        let filteredPlaces = places.filter((place: NewGooglePlace) => (place.rating || 0) >= 3.5 && (place.userRatingCount || 0) > 5);
+        if (filteredPlaces.length < 5) {
+            filteredPlaces = places.filter((place: NewGooglePlace) => (place.rating || 0) >= 2.5);
+        }
+        if (filteredPlaces.length === 0 && places.length > 0) { return { places }; }
+        return { places: filteredPlaces };
+    } catch (error) {
+        console.error("Failed to fetch from new Places API:", error);
+        return { places: [] };
+    }
+}
+
+export async function POST(request: Request) {
+  try {
+    if (!process.env.GOOGLE_MAPS_API_KEY || !process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+        throw new Error("API keys are not configured correctly on the server.");
+    }
+
+    const { location, radius, groupType, duration, budget, theme, currentItinerary, seenPlaces = [] }: ItineraryRequest = await request.json();
+
+    const getStopsCount = (duration: string): number => {
+      if (duration.includes("Quick")) return 2;
+      if (duration.includes("Half-day")) return 3;
+      if (duration.includes("All day")) return 4;
+      return 3;
+    };
+    const numberOfStops = getStopsCount(duration);
+
+    const dynamicThemeQuery = getDynamicQuery(theme);
+    const placesResult = await getPlacesFromGoogle(location.lat, location.lng, radius, dynamicThemeQuery, location.name);
+    
+    const lockedStops: Stop[] = currentItinerary.filter((s: Stop) => s.locked);
+    
+    // --- BUG FIX STARTS HERE ---
+    // Create a Map to ensure all venues are unique, prioritizing locked stops.
+    const venueMap = new Map<string, any>();
+
+    // 1. Add locked stops to the map first, converting them to the Google Place format for consistency.
+    lockedStops.forEach(stop => {
+        venueMap.set(stop.name, {
+            id: stop.placeId,
+            displayName: { text: stop.name },
+            types: [], // Type isn't critical here as AI uses category
+            location: { latitude: stop.lat, longitude: stop.lng },
+        });
+    });
+
+    // 2. Add new places from Google, only if they haven't been seen or are locked.
+    const newUnseenPlaces = placesResult.places.filter(place => 
+        !seenPlaces.includes(place.displayName.text) || venueMap.has(place.displayName.text)
+    );
+
+    // 3. Add the new, unseen places to the map. They won't overwrite locked stops already in the map.
+    newUnseenPlaces.forEach(place => {
+        if (!venueMap.has(place.displayName.text)) {
+            venueMap.set(place.displayName.text, place);
+        }
+    });
+
+    // 4. Our final, reliable list of venues is the values from the map.
+    const availableVenues = Array.from(venueMap.values());
+    // --- BUG FIX ENDS HERE ---
+    
+    if (availableVenues.length < (numberOfStops)) {
+        return new Response(JSON.stringify({ message: `Sorry, I couldn't find enough new high-quality spots for a '${theme}' theme. Please try a wider radius.` }), { status: 404 });
+    }
+    
+    const formattedVenues = availableVenues.map(place => {
+        // We need to re-map types for Google places that don't have a pre-assigned category (like locked stops)
+        const category = mapGoogleTypeToCategory(place.types || []);
+        return `- Name: "${place.displayName.text}", Category: "${category}", Rating: ${place.rating || 'N/A'}`
+    }).join('\n');
+
+    const baseInstructions = `
+      You are a creative and practical local guide for ${location.name}. Your task is to craft a compelling and logical "path" from a pre-vetted list of high-quality venues that perfectly matches the user's chosen theme and group type.
+      **THEMATIC COHESION (VERY IMPORTANT):**
+      - You MUST build the itinerary around the user's chosen **Theme** and **Group Type**.
+      - **"Friends" + "Sporty":** Prioritize social and active venues like bowling, arcade bars, or a park for frisbee, followed by a casual brewery or food truck park. AVOID solo gym workouts.
+      - **"Date" + "Cozy":** Focus on intimate, comfortable spots. Think small cafes, bookstores with seating, and warm, inviting restaurants with good ambiance.
+      - **"Family" + "Picnic":** Find a great park with a playground, and pair it with a nearby bakery or family-friendly cafe to pick up supplies.
+      - **"Solo" + "Artsy":** A perfect path would be a gallery or museum, followed by a stylish cafe perfect for reading or people-watching.
+      **CRITICAL RULES:**
+      1.  **USE EXACT VENUE NAMES:** The "name" for each stop in your JSON output MUST be the exact, full name of a venue from the "AVAILABLE VENUES" list.
+      2.  **CREATE A LOGICAL PATH:** The sequence of stops must make sense (e.g., activity then food). Aim for a variety of categories unless the theme dictates otherwise (like Coffee Crawl).
+      3.  **CONTEXTUAL DESCRIPTIONS:** The 'description' for each stop must explain *why* this stop fits the theme and group type.
+      4.  **CHOOSE ONLY FROM THE PROVIDED LIST:** You MUST exclusively select venues from the "AVAILABLE VENUES" list.
+      5.  **STRICT JSON OUTPUT:** Your response MUST be a single JSON object with one key: "stops", an array of exactly ${numberOfStops - lockedStops.length} NEW objects, plus the locked ones.
+      6.  **STOP OBJECT SCHEMA:** Each object must contain: "name", "description", and "category" (must be one of 'Food', 'Activity', 'Sightseeing', 'Entertainment', 'Shopping', 'Other').
+      7.  **RESHUFFLE LOGIC:** The list of available venues has already been filtered to exclude previously seen places. You should prioritize creating the best possible itinerary from this fresh list.
+    `;
+    const preferences = `**USER PREFERENCES:**\n- Group Type: "${groupType}", Duration: "${duration}", Budget: ~₹${budget}, Theme: "${theme}"`;
+    const availableVenuesSection = `**AVAILABLE VENUES (Choose from this high-quality list):**\n${formattedVenues}`;
+    
+    let prompt;
+
+    if (lockedStops.length > 0) {
+      const lockedStopsText = lockedStops.map(s => `- ${s.name}`).join('\n');
+      prompt = `${baseInstructions}\nThe user has LOCKED these stops: ${lockedStopsText}. You MUST include them. Build the rest of the path around them. Choose ${numberOfStops - lockedStops.length} new stops.\n${preferences}\n${availableVenuesSection}`;
+    } else {
+      prompt = `${baseInstructions}\nCreate a brand new path of ${numberOfStops} stops from scratch.\n${preferences}\n${availableVenuesSection}`;
+    }
+
+    const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { responseMimeType: "application/json" } });
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+    const generatedItinerary = JSON.parse(responseText);
+
+    if (!generatedItinerary.stops || !Array.isArray(generatedItinerary.stops)) {
+        throw new Error("AI response was not in the expected format.");
+    }
+    
+    // Combine generated stops with locked stops to ensure locked ones are preserved
+    const finalGeneratedStops = [...generatedItinerary.stops];
+    lockedStops.forEach(lockedStop => {
+        if (!finalGeneratedStops.some(s => s.name === lockedStop.name)) {
+            finalGeneratedStops.push({
+                name: lockedStop.name,
+                description: lockedStop.description,
+                category: lockedStop.category,
+            });
+        }
+    });
+
+
+    const finalStops = finalGeneratedStops.map((newStop: any) => {
+        const originalVenue = availableVenues.find(v => v.displayName.text === newStop.name);
+        const isLocked = lockedStops.some(locked => locked.name === newStop.name);
+        return { 
+            ...newStop,
+            lat: originalVenue?.location.latitude,
+            lng: originalVenue?.location.longitude,
+            placeId: originalVenue?.id,
+            locked: isLocked 
+        };
+    }).filter(stop => stop.lat && stop.lng); // Ensure we only return stops with valid geo-data
+
+    return new Response(JSON.stringify({ stops: finalStops }), { status: 200 });
+  } catch (error) {
+    console.error("Error in API route:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+    return new Response(JSON.stringify({ message: `AI generation failed: ${errorMessage}` }), { status: 500 });
+  }
+}

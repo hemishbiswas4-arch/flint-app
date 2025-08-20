@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+.page {
+    background-color: #0c0a09;
+    color: #e2e8f0;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    position: relative;
+}
+
+.mapContainer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+}
+.map { width: 100%; height: 100%; }
+.mapLoading {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background-color: #1a1a1a;
+    color: #9ca3af;
+}
+
+.panel {
+    box-sizing: border-box;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 1.5rem;
+    width: 500px; /* Increased width for more space */
+    max-height: 95vh;
+    background-color: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 30px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.view {
+    display: none;
+}
+.viewActive {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 2rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 transparent;
+}
+.viewActive::-webkit-scrollbar { width: 8px; }
+.viewActive::-webkit-scrollbar-track { background: transparent; }
+.viewActive::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 10px; }
+
+.header {
+    box-sizing: border-box;
+    text-align: center;
+    margin-bottom: 2rem;
+}
+.title { font-size: 3rem; font-weight: 800; color: #f0f0f0; letter-spacing: -0.05em; }
+.subtitle { color: #a5b4fc; font-size: 1rem; margin-top: -0.25rem; }
+
+.controlsGrid {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+.label { display: block; font-size: 0.875rem; font-weight: 500; color: #9ca3af; margin-bottom: 0.5rem; }
+.inputWrapper { box-sizing: border-box; position: relative; }
+.inputIcon { position: absolute; top: 50%; left: 1rem; transform: translateY(-50%); color: #6b7280; pointer-events: none; }
+
+.filterInput, .filterSelect {
+    box-sizing: border-box; /* BRUTE FORCE FIX */
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: rgba(31, 41, 55, 0.8);
+    border: 1px solid #4b5563;
+    border-radius: 0.5rem;
+    color: #d1d5db;
+    transition: all 0.2s ease-in-out;
+    font-size: 0.875rem;
+}
+.filterInput { padding-left: 2.75rem; }
+.filterInput::placeholder { color: #6b7280; }
+.filterInput:focus, .filterSelect:focus {
+    outline: none;
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.3);
+}
+
+.slider {
+    width: 100%; -webkit-appearance: none; appearance: none;
+    height: 6px; background: #374151; border-radius: 9999px; outline: none;
+}
+.slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 20px; height: 20px;
+    background: #c7d2fe; border-radius: 50%; cursor: pointer; border: 3px solid #4f46e5;
+}
+
+.sparkButton {
+    box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+    width: 100%;
+    margin-top: 2rem;
+    background: linear-gradient(to right, #4f46e5, #7c3aed);
+    color: white; font-weight: 600; font-size: 1rem; padding: 0.875rem 1.5rem;
+    border-radius: 0.5rem; border: none; cursor: pointer; transition: all 0.2s ease-in-out;
+    box-shadow: 0 4px 15px -3px rgba(79, 70, 229, 0.4);
+}
+.sparkButton:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -3px rgba(79, 70, 229, 0.4); }
+.sparkButton:disabled { background: #374151; color: #6b7280; cursor: not-allowed; transform: none; box-shadow: none; }
+.errorText { text-align: center; color: #f87171; margin-top: 1rem; font-size: 0.875rem; }
+
+.itineraryHeader { box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-shrink: 0; }
+.itineraryTitle { font-size: 1.5rem; font-weight: 700; }
+.backButton, .reshuffleButton {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: none; border: 1px solid #4b5563; color: #d1d5db;
+    font-size: 0.875rem; padding: 0.5rem 1rem; border-radius: 0.5rem;
+    cursor: pointer; transition: all .2s;
+}
+.backButton:hover, .reshuffleButton:hover { background-color: #374151; border-color: #6b7280; }
+
+.palette {
+    flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem;
+    margin-right: -1rem; padding-right: 1rem;
+    scrollbar-width: thin; scrollbar-color: #4b5563 transparent;
+}
+.palette::-webkit-scrollbar { width: 8px; }
+.palette::-webkit-scrollbar-track { background: transparent; }
+.palette::-webkit-scrollbar-thumb { background-color: #4b5563; border-radius: 10px; }
+
+.paletteStop { box-sizing: border-box; background-color: rgba(31, 41, 55, 0.7); padding: 1.25rem; border-radius: 0.75rem; border: 1px solid #374151; cursor: pointer; transition: all 0.2s ease-in-out; }
+.paletteStop.selectedStop { border-color: #818cf8; transform: scale(1.02); }
+.stopHeader { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+.stopName { font-weight: 600; font-size: 1.125rem; color: #f0f0f0; margin-right: 1rem; }
+.headerActions { display: flex; align-items: center; gap: 0.75rem; }
+.categoryTag { background-color: #3730a3; color: #e0e7ff; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+.lockButton { background: none; border: none; color: #9ca3af; cursor: pointer; transition: color 0.2s; padding: 0; }
+.lockButton:hover { color: #ffffff; }
+.stopDescription { font-size: 0.875rem; color: #9ca3af; line-height: 1.5; }
+.stopFooter { display: flex; justify-content: flex-end; margin-top: 1rem; }
+.mapLink {
+    display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem;
+    font-weight: 500; color: #a5b4fc; text-decoration: none; transition: color 0.2s;
+}
+.mapLink:hover { color: #c7d2fe; }
