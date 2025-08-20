@@ -108,7 +108,7 @@ async function getPlacesFromGoogle(lat: number, lng: number, radius: number, dyn
 
 export async function POST(request: Request) {
   try {
-    if (!process.env.GOOGLE_MAPS_API_KEY || !process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+    if (!process.env.GOOGLE_MAPS_API_KEY || !process.env.GEMINI_API_KEY) {
         throw new Error("API keys are not configured correctly on the server.");
     }
 
@@ -186,7 +186,7 @@ export async function POST(request: Request) {
       prompt = `${baseInstructions}\nCreate a brand new path of ${numberOfStops} stops from scratch.\n${preferences}\n${availableVenuesSection}`;
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { responseMimeType: "application/json" } });
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
