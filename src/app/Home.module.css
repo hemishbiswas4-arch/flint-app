@@ -156,3 +156,49 @@
     font-weight: 500; color: #a5b4fc; text-decoration: none; transition: color 0.2s;
 }
 .mapLink:hover { color: #c7d2fe; }
+
+/* Styles for Authentication */
+.authHeader {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 10;
+}
+
+.authContainer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background-color: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.avatar {
+    border-radius: 50%;
+}
+
+.authText {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #e2e8f0;
+}
+
+.authButton {
+    background-color: #4f46e5;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.authButton:hover {
+    background-color: #4338ca;
+}

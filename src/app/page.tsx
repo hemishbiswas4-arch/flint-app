@@ -1,15 +1,50 @@
+// Location: src/app/page.tsx
 "use client";
 
 import React, { useState, useEffect, useRef, memo } from 'react';
-// FIXED: Removed unused 'Users' and 'Clock'
 import { Lock, Unlock, MapPin, IndianRupee, Sparkles, ExternalLink, ArrowLeft } from 'lucide-react';
 import styles from './Home.module.css';
+import { signIn, signOut, useSession } from 'next-auth/react';
+import Image from 'next/image';
 
 // --- TYPES ---
 type ItineraryStop = { name: string; description: string; category: string; locked: boolean; lat: number; lng: number; placeId: string; };
 type LocationState = { name: string; lat: number | null; lng: number | null; };
 
-// --- MAP & LOCATION COMPONENTS ---
+// --- NEW LOGIN BUTTONS COMPONENT ---
+function AuthButtons() {
+  const { data: session } = useSession();
+
+  if (session?.user) {
+    return (
+      <div className={styles.authContainer}>
+        {session.user.image && (
+          <Image 
+            src={session.user.image} 
+            alt={session.user.name || "User"} 
+            width={32} 
+            height={32} 
+            className={styles.avatar}
+          />
+        )}
+        <span className={styles.authText}>Signed in as {session.user.name}</span>
+        <button onClick={() => signOut()} className={styles.authButton}>
+          Sign Out
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.authContainer}>
+      <button onClick={() => signIn('google')} className={styles.authButton}>
+        Sign in with Google
+      </button>
+    </div>
+  );
+}
+
+// --- MAP & LOCATION COMPONENTS (No Changes) ---
 const MapComponent = memo(({ stops, selectedStopIndex, onMarkerClick }: { stops: ItineraryStop[], selectedStopIndex: number | null, onMarkerClick: (index: number) => void }) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -124,16 +159,13 @@ export default function Home() {
       });
       if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.message || 'AI generation failed'); }
       const responseData = await response.json();
-
-      // FIXED: Defined a more specific type for the incoming stops
-      const validStops: ItineraryStop[] = responseData.stops.filter((stop: { lat: number; lng: number }) => typeof stop.lat === 'number' && typeof stop.lng === 'number');
-
+      const validStops: ItineraryStop[] = responseData.stops.filter((stop: { lat: number; lng: number; }) => typeof stop.lat === 'number' && typeof stop.lng === 'number');
       setItinerary(validStops);
       const newSeen = new Set(seenPlaces);
       validStops.forEach(stop => newSeen.add(stop.name));
       setSeenPlaces(Array.from(newSeen));
       setView('itinerary');
-    } catch (err) { // FIXED: Changed type from 'any' to the more general 'unknown'
+    } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -148,6 +180,9 @@ export default function Home() {
     <main className={styles.page}>
       <div className={styles.mapContainer}>
         {isMapsScriptLoaded ? <MapComponent stops={itinerary || []} selectedStopIndex={selectedStopIndex} onMarkerClick={setSelectedStopIndex} /> : <div className={styles.mapLoading}>Loading Map...</div>}
+      </div>
+      <div className={styles.authHeader}>
+        <AuthButtons />
       </div>
 
       <div className={styles.panel}>
