@@ -4,7 +4,7 @@ import "./globals.css";
 import Providers from "./providers"; // <-- IMPORT THE NEW PROVIDER
 
 export const metadata: Metadata = {
-  title: "Flint",
+  title: "Outplann",
   description: "Spark your next adventure",
 };
 
@@ -15,10 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        {/* WRAP YOUR APP WITH THE PROVIDER */}
-        <Providers>{children}</Providers>
-      </body>
+        <body className="h-screen w-screen overflow-hidden bg-[#0c0a09]">
+          <Providers>{children}</Providers>
+        </body>
     </html>
   );
 }
