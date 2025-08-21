@@ -97,7 +97,6 @@ const queryKeywords = {
     'Family Park': ['parks with playgrounds', 'family-friendly parks'], 'Family Museum': ['science museums', 'childrens museums', 'interactive exhibits'], 'Lunch Spot': ['family restaurants', 'casual lunch spots'], 'Amusement': ['amusement parks', 'family fun centers', 'arcades'], 'Kid-Friendly Restaurant': ['restaurants with play areas', 'family-friendly dining'], 'Gourmet Store': ['gourmet food stores', 'specialty food shops'],
 };
 
-
 // --- HELPER FUNCTIONS ---
 function mapGoogleTypeToCategory(types: string[]): Category {
     if (types.includes('restaurant') || types.includes('cafe') || types.includes('bar') || types.includes('bakery')) return 'Food';
@@ -127,7 +126,7 @@ async function getPlacesFromGoogle(lat: number, lng: number, radius: number, que
         const highQualityPlaces = allPlaces.filter((p: NewGooglePlace) => (p.rating || 0) >= 4.0 && (p.userRatingCount || 0) > 20);
         if (highQualityPlaces.length >= 5) return highQualityPlaces;
 
-        const goodQualityPlaces = allPlaces.filter((p: NewGooglePlace) => (p.rating || 0) >= 3.7 && (p.userRatingCount || 0) > 8);
+        const goodQualityPlaces = allPlaces.filter((p: NewGooglePlace) => (p.rating || 0) >= 3.0 && (p.userRatingCount || 0) > 5);
         return goodQualityPlaces;
 
     } catch (error) {
@@ -153,7 +152,6 @@ export async function POST(request: Request) {
     const numberOfStops = getStopsCount(duration);
     const lockedStops: Stop[] = currentItinerary.filter((s) => s.locked);
     
-    // --- MATCHMAKER LOGIC ---
     let matchingVibes = vibeDatabase.filter(vibe => 
         (vibe.tags.group === groupType) && (vibe.tags.theme === theme)
     );
@@ -166,7 +164,6 @@ export async function POST(request: Request) {
     const selectedVibe = matchingVibes[Math.floor(Math.random() * matchingVibes.length)];
     const structure = selectedVibe.recipe.slice(0, numberOfStops);
     
-    // --- MULTI-QUERY ENGINE ---
     const placePromises = structure.map(step => {
         const queryKeywordOptions = (queryKeywords[step as keyof typeof queryKeywords] || [step]);
         const queryKeyword = queryKeywordOptions[Math.floor(Math.random() * queryKeywordOptions.length)];
@@ -177,10 +174,7 @@ export async function POST(request: Request) {
     
     const venueMap = new Map<string, NewGooglePlace | Stop>();
     lockedStops.forEach(stop => {
-      venueMap.set(stop.name, {
-        id: stop.placeId, displayName: { text: stop.name }, types: [],
-        location: { latitude: stop.lat, longitude: stop.lng }
-      } as NewGooglePlace);
+      venueMap.set(stop.name, stop);
     });
     allPlacesResults.flat().forEach(place => {
         if (!venueMap.has(place.displayName.text) && !seenPlaces.includes(place.displayName.text)) {
@@ -193,17 +187,16 @@ export async function POST(request: Request) {
       return new Response(JSON.stringify({ message: "Sorry, we couldn't find enough high-quality places for your request. Please try a wider radius." }), { status: 404 });
     }
     
-    // --- AI PROMPT AND CALL ---
     const formattedVenues = availableVenues.map(place => {
-      const p = place as any;
-      const name = p.displayName ? p.displayName.text : p.name;
-      const lat = p.location ? p.location.latitude : p.lat;
-      const lng = p.location ? p.location.longitude : p.lng;
-      // NEW: Include coordinates for the AI
-      return `- Name: "${name}", Category: "${mapGoogleTypeToCategory(p.types || [])}", Rating: ${p.rating || 'N/A'}, Coords: (${lat}, ${lng})`;
+      // ✅ CORRECTED: Use a type guard to safely access properties
+      const name = 'displayName' in place ? place.displayName.text : place.name;
+      const types = 'types' in place ? place.types : [];
+      const rating = 'rating' in place ? place.rating : 'N/A';
+      const lat = 'location' in place ? place.location.latitude : place.lat;
+      const lng = 'location' in place ? place.location.longitude : place.lng;
+      return `- Name: "${name}", Category: "${mapGoogleTypeToCategory(types)}", Rating: ${rating || 'N/A'}, Coords: (${lat}, ${lng})`;
     }).join('\n');
     
-    // NEW: Updated instructions for the AI
     const baseInstructions = `You are an expert local guide for ${location.name}. Create a perfect itinerary from the pre-vetted list of venues.
 **THEMATIC COHESION:** The itinerary's flow must feel logical. Descriptions must be vibrant and explain *why* each stop fits the theme.
 **CRITICAL RULES:**
