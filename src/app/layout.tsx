@@ -1,11 +1,10 @@
-// Location: src/app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
-import { Providers } from "./providers";
+import { Providers } from "./providers"; // Should have curly braces {}
 
 export const metadata: Metadata = {
   title: "Outplann",
-  description: "Spark your next adventure",
+  description: "Spark your next adventure.",
 };
 
 export default function RootLayout({
@@ -15,9 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-        <body className="h-screen w-screen overflow-hidden bg-[#0c0a09]">
-          <Providers>{children}</Providers>
-        </body>
+      <body>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
