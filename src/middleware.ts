@@ -8,7 +8,7 @@ export async function middleware(request: NextRequest) {
   // If neither a cookie nor a token header exists, the user is not logged in.
   if (!sessionCookie && !authorizationHeader) {
     const isApiRoute = request.nextUrl.pathname.startsWith('/api/');
-    const redirectUrl = new URL('/auth/signin', request.url);
+    const redirectUrl = new URL('/signin', request.url);
 
     if (isApiRoute) {
       return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
