@@ -1,7 +1,7 @@
 // Location: src/app/layout.tsx
 import type { Metadata } from "next";
 import "./globals.css";
-import Providers from "./providers"; // <-- IMPORT THE NEW PROVIDER
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "Outplann",
