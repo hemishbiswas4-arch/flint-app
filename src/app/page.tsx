@@ -1,7 +1,7 @@
 // Location: src/app/page.tsx
 "use client";
 
-import React, { useState, useEffect, useRef, memo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Lock, Unlock, MapPin, Sparkles, ExternalLink, ArrowLeft, Crosshair } from 'lucide-react';
 import styles from './Home.module.css';
 import { signIn, signOut, useSession } from 'next-auth/react';
