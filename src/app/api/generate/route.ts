@@ -1,14 +1,22 @@
 // Location: src/app/api/generate/route.ts
+
+// --- NEW IMPORTS for Firebase Auth ---
+import { auth } from 'firebase-admin';
+import { initializeFirebaseAdmin } from "@/lib/firebase-admin";
+import { NextRequest, NextResponse } from "next/server";
+import { headers, cookies } from "next/headers";
+
+// --- EXISTING IMPORTS ---
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { auth } from "@/auth";
 import { Pool } from "pg";
+
 
 // --- DATABASE CONNECTION ---
 const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
 
-// --- TYPES ---
+// --- TYPES (No changes) ---
 type Category = 'Food' | 'Activity' | 'Sightseeing' | 'Entertainment' | 'Shopping' | 'Other';
 interface Stop {
   name: string;
@@ -43,7 +51,7 @@ interface NewGooglePlace {
     userRatingCount?: number;
 }
 
-// --- PATHS DATABASE & KEYWORDS ---
+// --- PATHS DATABASE & KEYWORDS (No changes) ---
 const vibeDatabase = [
     { name: 'Sporty Fit', tags: { group: 'Date', theme: 'Active' }, recipe: ['Active Fun', 'Casual Restaurant'] },
     { name: 'Picnic Core', tags: { group: 'Date', theme: 'Relaxing' }, recipe: ['Aesthetic Snack Pickup', 'Park Picnic Spot', 'Dessert Cafe'] },
@@ -97,7 +105,7 @@ const queryKeywords = {
     'Family Park': ['parks with playgrounds', 'family-friendly parks'], 'Family Museum': ['science museums', 'childrens museums', 'interactive exhibits'], 'Lunch Spot': ['family restaurants', 'casual lunch spots'], 'Amusement': ['amusement parks', 'family fun centers', 'arcades'], 'Kid-Friendly Restaurant': ['restaurants with play areas', 'family-friendly dining'], 'Gourmet Store': ['gourmet food stores', 'specialty food shops'],
 };
 
-// --- HELPER FUNCTIONS ---
+// --- HELPER FUNCTIONS (No changes) ---
 function mapGoogleTypeToCategory(types: string[]): Category {
     if (types.includes('restaurant') || types.includes('cafe') || types.includes('bar') || types.includes('bakery')) return 'Food';
     if (types.includes('tourist_attraction') || types.includes('museum') || types.includes('park') || types.includes('art_gallery')) return 'Sightseeing';
@@ -107,7 +115,6 @@ function mapGoogleTypeToCategory(types: string[]): Category {
     return 'Other';
 }
 
-// --- GOOGLE APIS ---
 async function getPlacesFromGoogle(lat: number, lng: number, radius: number, queryKeyword: string, locationName: string): Promise<NewGooglePlace[]> {
     const PLACES_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
     if (!PLACES_API_KEY) throw new Error("Google Maps API key is not configured.");
@@ -135,19 +142,66 @@ async function getPlacesFromGoogle(lat: number, lng: number, radius: number, que
     }
 }
 
-// --- MAIN API FUNCTION ---
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) { return new Response(JSON.stringify({ message: "Not authenticated" }), { status: 401 }); }
+
+// --- NEW HELPER FUNCTION to get the authenticated Firebase user ---
+async function getFirebaseUser(): Promise<auth.DecodedIdToken | null> {
+    // 1. Check for the website's session cookie
+    const sessionCookie = cookies().get("session")?.value;
+    if (sessionCookie) {
+        try {
+            return await auth().verifySessionCookie(sessionCookie, true);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // 2. If no cookie, check for the mobile app's authorization token
+    const authorization = headers().get("Authorization");
+    if (authorization?.startsWith("Bearer ")) {
+        const idToken = authorization.split("Bearer ")[1];
+        try {
+            return await auth().verifyIdToken(idToken);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // 3. If neither is found, there's no authenticated user
+    return null;
+}
+
+
+// --- MAIN API FUNCTION (Updated for Firebase) ---
+export async function POST(request: NextRequest) {
+  await initializeFirebaseAdmin();
+  const decodedToken = await getFirebaseUser();
+
+  // NEW: Authenticate using the decoded Firebase token
+  if (!decodedToken || !decodedToken.uid) {
+    return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+  }
 
   const client = await pool.connect();
   try {
-    const userResult = await client.query('SELECT "usageCount" FROM "users" WHERE id = $1', [session.user.id]);
-    if (userResult.rows.length === 0) return new Response(JSON.stringify({ message: "User not found" }), { status: 404 });
+    const firebaseUid = decodedToken.uid; // Use Firebase UID as the user's unique ID
+    let userResult = await client.query('SELECT "usageCount" FROM "users" WHERE id = $1', [firebaseUid]);
+
+    // NEW: If the Firebase user doesn't exist in our database, create them
+    if (userResult.rows.length === 0) {
+        const userEmail = decodedToken.email || 'N/A';
+        const initialUsageCount = 10; // Set a default usage count
+        await client.query('INSERT INTO "users" (id, email, "usageCount") VALUES ($1, $2, $3)', [firebaseUid, userEmail, initialUsageCount]);
+        userResult = await client.query('SELECT "usageCount" FROM "users" WHERE id = $1', [firebaseUid]);
+    }
+    
     const usageCount = userResult.rows[0].usageCount;
-    if (usageCount <= 0) return new Response(JSON.stringify({ message: "Usage limit reached." }), { status: 403 });
+    if (usageCount <= 0) {
+      return NextResponse.json({ message: "Usage limit reached." }, { status: 403 });
+    }
 
     const { location, radius, groupType, duration, theme, currentItinerary, seenPlaces = [] }: ItineraryRequest = await request.json();
+    
+    // --- (Your itinerary generation logic remains the same below this line) ---
     const getStopsCount = (d: string): number => d.includes("Quick") ? 2 : d.includes("All day") ? 4 : 3;
     const numberOfStops = getStopsCount(duration);
     const lockedStops: Stop[] = currentItinerary.filter((s) => s.locked);
@@ -159,7 +213,7 @@ export async function POST(request: Request) {
         matchingVibes = vibeDatabase.filter(vibe => vibe.tags.group === groupType);
     }
     if (matchingVibes.length === 0) {
-        return new Response(JSON.stringify({ message: `Couldn't find any vibes for '${groupType}'.` }), { status: 404 });
+        return NextResponse.json({ message: `Couldn't find any vibes for '${groupType}'.` }, { status: 404 });
     }
     const selectedVibe = matchingVibes[Math.floor(Math.random() * matchingVibes.length)];
     const structure = selectedVibe.recipe.slice(0, numberOfStops);
@@ -184,11 +238,10 @@ export async function POST(request: Request) {
     const availableVenues = Array.from(venueMap.values());
 
     if (availableVenues.length < numberOfStops) {
-      return new Response(JSON.stringify({ message: "Sorry, we couldn't find enough high-quality places for your request. Please try a wider radius." }), { status: 404 });
+      return NextResponse.json({ message: "Sorry, we couldn't find enough high-quality places for your request. Please try a wider radius." }, { status: 404 });
     }
     
     const formattedVenues = availableVenues.map(place => {
-      // ✅ CORRECTED: Use a type guard to safely access properties
       const name = 'displayName' in place ? place.displayName.text : place.name;
       const types = 'types' in place ? place.types : [];
       const rating = 'rating' in place ? place.rating : 'N/A';
@@ -197,13 +250,7 @@ export async function POST(request: Request) {
       return `- Name: "${name}", Category: "${mapGoogleTypeToCategory(types)}", Rating: ${rating || 'N/A'}, Coords: (${lat}, ${lng})`;
     }).join('\n');
     
-    const baseInstructions = `You are an expert local guide for ${location.name}. Create a perfect itinerary from the pre-vetted list of venues.
-**THEMATIC COHESION:** The itinerary's flow must feel logical. Descriptions must be vibrant and explain *why* each stop fits the theme.
-**CRITICAL RULES:**
-1.  **PRIORITIZE PROXIMITY:** You MUST choose stops that are geographically close to each other to form a convenient and logical path. Use the provided "Coords" for each venue to make this decision. The user should not have to travel long distances between stops.
-2.  **ENSURE VARIETY:** Pick a variety of venue categories that fit a logical daily path. Do NOT pick multiple venues from the same category unless the theme is specific (e.g., "Cafe Crawl").
-3.  **USE EXACT VENUE NAMES:** The "name" in your JSON output MUST be an exact match from the "AVAILABLE VENUES" list.
-4.  **STRICT JSON OUTPUT:** Respond with a single JSON object with one key: "stops".`;
+    const baseInstructions = `You are an expert local guide for ${location.name}. Create a perfect itinerary from the pre-vetted list of venues.\n**THEMATIC COHESION:** The itinerary's flow must feel logical. Descriptions must be vibrant and explain *why* each stop fits the theme.\n**CRITICAL RULES:**\n1.  **PRIORITIZE PROXIMITY:** You MUST choose stops that are geographically close to each other to form a convenient and logical path. Use the provided "Coords" for each venue to make this decision. The user should not have to travel long distances between stops.\n2.  **ENSURE VARIETY:** Pick a variety of venue categories that fit a logical daily path. Do NOT pick multiple venues from the same category unless the theme is specific (e.g., "Cafe Crawl").\n3.  **USE EXACT VENUE NAMES:** The "name" in your JSON output MUST be an exact match from the "AVAILABLE VENUES" list.\n4.  **STRICT JSON OUTPUT:** Respond with a single JSON object with one key: "stops".`;
     const preferences = `**USER PREFERENCES:**\n- Group: "${groupType}", Duration: "${duration}", Theme: "${theme}", Selected Vibe: "${selectedVibe.name}"`;
     const availableVenuesSection = `**AVAILABLE VENUES (Choose from this list):**\n${formattedVenues}`;
     const lockedStopsText = lockedStops.map(s => `- ${s.name}`).join('\n');
@@ -224,7 +271,8 @@ export async function POST(request: Request) {
         throw new Error("AI response was not in the expected format.");
     }
     
-    await client.query('UPDATE "users" SET "usageCount" = "usageCount" - 1 WHERE id = $1', [session.user.id]);
+    // UPDATED: Use firebaseUid to decrement the usage count
+    await client.query('UPDATE "users" SET "usageCount" = "usageCount" - 1 WHERE id = $1', [firebaseUid]);
     
     const finalGeneratedStops: GeneratedStop[] = [...generatedItinerary.stops];
     lockedStops.forEach(lockedStop => {
@@ -243,11 +291,11 @@ export async function POST(request: Request) {
         return { ...newStop, lat, lng, placeId, locked: isLocked };
     }).filter((stop): stop is Stop => stop !== null);
 
-    return new Response(JSON.stringify({ stops: finalStops }), { status: 200 });
+    return NextResponse.json({ stops: finalStops }, { status: 200 });
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-    return new Response(JSON.stringify({ message: `AI generation failed: ${errorMessage}` }), { status: 500 });
+    return NextResponse.json({ message: `AI generation failed: ${errorMessage}` }, { status: 500 });
   } finally {
     if (client) client.release();
   }
