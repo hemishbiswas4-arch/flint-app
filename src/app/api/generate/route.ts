@@ -1,12 +1,9 @@
 // Location: src/app/api/generate/route.ts
 
-// --- NEW IMPORTS for Firebase Auth ---
 import { auth } from 'firebase-admin';
 import { initializeFirebaseAdmin } from "@/lib/firebase-admin";
 import { NextRequest, NextResponse } from "next/server";
 import { headers, cookies } from "next/headers";
-
-// --- EXISTING IMPORTS ---
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Pool } from "pg";
 
@@ -16,7 +13,7 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL,
 });
 
-// --- TYPES (No changes) ---
+// --- TYPES ---
 type Category = 'Food' | 'Activity' | 'Sightseeing' | 'Entertainment' | 'Shopping' | 'Other';
 interface Stop {
   name: string;
@@ -51,7 +48,7 @@ interface NewGooglePlace {
     userRatingCount?: number;
 }
 
-// --- PATHS DATABASE & KEYWORDS (No changes) ---
+// --- PATHS DATABASE & KEYWORDS ---
 const vibeDatabase = [
     { name: 'Sporty Fit', tags: { group: 'Date', theme: 'Active' }, recipe: ['Active Fun', 'Casual Restaurant'] },
     { name: 'Picnic Core', tags: { group: 'Date', theme: 'Relaxing' }, recipe: ['Aesthetic Snack Pickup', 'Park Picnic Spot', 'Dessert Cafe'] },
@@ -105,7 +102,7 @@ const queryKeywords = {
     'Family Park': ['parks with playgrounds', 'family-friendly parks'], 'Family Museum': ['science museums', 'childrens museums', 'interactive exhibits'], 'Lunch Spot': ['family restaurants', 'casual lunch spots'], 'Amusement': ['amusement parks', 'family fun centers', 'arcades'], 'Kid-Friendly Restaurant': ['restaurants with play areas', 'family-friendly dining'], 'Gourmet Store': ['gourmet food stores', 'specialty food shops'],
 };
 
-// --- HELPER FUNCTIONS (No changes) ---
+// --- HELPER FUNCTIONS ---
 function mapGoogleTypeToCategory(types: string[]): Category {
     if (types.includes('restaurant') || types.includes('cafe') || types.includes('bar') || types.includes('bakery')) return 'Food';
     if (types.includes('tourist_attraction') || types.includes('museum') || types.includes('park') || types.includes('art_gallery')) return 'Sightseeing';
@@ -143,10 +140,12 @@ async function getPlacesFromGoogle(lat: number, lng: number, radius: number, que
 }
 
 
-// --- NEW HELPER FUNCTION to get the authenticated Firebase user ---
+// --- HELPER FUNCTION to get the authenticated Firebase user ---
 async function getFirebaseUser(): Promise<auth.DecodedIdToken | null> {
-    // 1. Check for the website's session cookie
-    const sessionCookie = cookies().get("session")?.value;
+    // In Next.js 15+, cookies() and headers() return a Promise, so we must await.
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session")?.value;
+
     if (sessionCookie) {
         try {
             return await auth().verifySessionCookie(sessionCookie, true);
@@ -155,8 +154,9 @@ async function getFirebaseUser(): Promise<auth.DecodedIdToken | null> {
         }
     }
 
-    // 2. If no cookie, check for the mobile app's authorization token
-    const authorization = headers().get("Authorization");
+    const headerList = await headers();
+    const authorization = headerList.get("Authorization");
+
     if (authorization?.startsWith("Bearer ")) {
         const idToken = authorization.split("Bearer ")[1];
         try {
@@ -165,8 +165,7 @@ async function getFirebaseUser(): Promise<auth.DecodedIdToken | null> {
             return null;
         }
     }
-
-    // 3. If neither is found, there's no authenticated user
+    
     return null;
 }
 
@@ -176,20 +175,18 @@ export async function POST(request: NextRequest) {
   await initializeFirebaseAdmin();
   const decodedToken = await getFirebaseUser();
 
-  // NEW: Authenticate using the decoded Firebase token
   if (!decodedToken || !decodedToken.uid) {
     return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
   }
 
   const client = await pool.connect();
   try {
-    const firebaseUid = decodedToken.uid; // Use Firebase UID as the user's unique ID
+    const firebaseUid = decodedToken.uid;
     let userResult = await client.query('SELECT "usageCount" FROM "users" WHERE id = $1', [firebaseUid]);
 
-    // NEW: If the Firebase user doesn't exist in our database, create them
     if (userResult.rows.length === 0) {
         const userEmail = decodedToken.email || 'N/A';
-        const initialUsageCount = 10; // Set a default usage count
+        const initialUsageCount = 10;
         await client.query('INSERT INTO "users" (id, email, "usageCount") VALUES ($1, $2, $3)', [firebaseUid, userEmail, initialUsageCount]);
         userResult = await client.query('SELECT "usageCount" FROM "users" WHERE id = $1', [firebaseUid]);
     }
@@ -201,7 +198,6 @@ export async function POST(request: NextRequest) {
 
     const { location, radius, groupType, duration, theme, currentItinerary, seenPlaces = [] }: ItineraryRequest = await request.json();
     
-    // --- (Your itinerary generation logic remains the same below this line) ---
     const getStopsCount = (d: string): number => d.includes("Quick") ? 2 : d.includes("All day") ? 4 : 3;
     const numberOfStops = getStopsCount(duration);
     const lockedStops: Stop[] = currentItinerary.filter((s) => s.locked);
@@ -271,7 +267,6 @@ export async function POST(request: NextRequest) {
         throw new Error("AI response was not in the expected format.");
     }
     
-    // UPDATED: Use firebaseUid to decrement the usage count
     await client.query('UPDATE "users" SET "usageCount" = "usageCount" - 1 WHERE id = $1', [firebaseUid]);
     
     const finalGeneratedStops: GeneratedStop[] = [...generatedItinerary.stops];
