@@ -23,5 +23,6 @@ export async function middleware(request: NextRequest) {
 
 // This config specifies which routes are protected by the middleware
 export const config = {
-  matcher: ["/((?!auth/signin|_next/static|_next/image|favicon.ico).*)"],
+  // This tells the middleware to run on all paths EXCEPT the ones inside the parentheses
+  matcher: ["/((?!api|signin|_next/static|_next/image|favicon.ico).*)"],
 };
