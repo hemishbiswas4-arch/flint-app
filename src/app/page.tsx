@@ -2,9 +2,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Lock, Unlock, MapPin, Sparkles, ExternalLink, ArrowLeft, Crosshair } from 'lucide-react';
 import styles from './Home.module.css';
-import { signIn, signOut, useSession } from 'next-auth/react';
 import Image from 'next/image';
 import MapComponent from './components/MapComponent';
 
@@ -12,38 +12,27 @@ import MapComponent from './components/MapComponent';
 type ItineraryStop = { name: string; description: string; category: string; locked: boolean; lat: number; lng: number; placeId: string; };
 type LocationState = { name: string; lat: number | null; lng: number | null; };
 
-// --- LOGIN BUTTONS COMPONENT ---
-function AuthButtons() {
-  const { data: session } = useSession();
-  if (session?.user) {
-    return (
-      <div className={styles.authContainer}>
-        {session.user.image && (
-          <Image 
-            src={session.user.image} 
-            alt={session.user.name || "User"} 
-            width={32} 
-            height={32} 
-            className={styles.avatar}
-          />
-        )}
-        <span className={styles.authText}>Signed in as {session.user.name}</span>
-        <button onClick={() => signOut()} className={styles.authButton}>
-          Sign Out
-        </button>
-      </div>
-    );
-  }
+
+// --- NEW SIGN-OUT BUTTON COMPONENT ---
+function SignOutButton() {
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    // Call the API route to clear the session cookie
+    await fetch('/api/auth/session-logout', { method: 'POST' });
+    // Redirect the user to the sign-in page
+    router.push('/signin');
+  };
+
   return (
-    <div className={styles.authContainer}>
-      <button onClick={() => signIn('google')} className={styles.authButton}>
-        Sign in with Google
-      </button>
-    </div>
+    <button onClick={handleSignOut} className={styles.authButton}>
+      Sign Out
+    </button>
   );
 }
 
-// --- LOCATION SEARCH COMPONENT ---
+
+// --- LOCATION SEARCH COMPONENT (No changes needed) ---
 const LocationSearchInput = ({ value, onLocationSelect, isScriptLoaded }: { value: string, onLocationSelect: (location: LocationState) => void, isScriptLoaded: boolean }) => {
   const [inputValue, setInputValue] = useState(value);
   const autoCompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -62,6 +51,7 @@ const LocationSearchInput = ({ value, onLocationSelect, isScriptLoaded }: { valu
 
   return <div className={styles.inputWrapper}><MapPin size={18} className={styles.inputIcon} /><input ref={inputRef} type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} className={styles.filterInput} placeholder={isScriptLoaded ? "Search a city..." : "Loading Maps..."} disabled={!isScriptLoaded} /></div>;
 };
+
 
 // --- MAIN HOME COMPONENT ---
 export default function Home() {
@@ -162,7 +152,8 @@ export default function Home() {
         {isMapsScriptLoaded ? <MapComponent stops={itinerary || []} selectedStopIndex={selectedStopIndex} onMarkerClick={setSelectedStopIndex} /> : <div className={styles.mapLoading}>Loading Map...</div>}
       </div>
       <div className={styles.authHeader}>
-        <AuthButtons />
+        {/* REPLACED with the new SignOutButton */}
+        <SignOutButton />
       </div>
       <div className={styles.panel}>
         <div className={`${styles.view} ${view === 'controls' ? styles.viewActive : ''}`}>
@@ -171,7 +162,6 @@ export default function Home() {
             <p className={styles.subtitle}>Spark your next adventure.</p>
           </div>
           
-          {/* --- NEW, RESTRUCTURED LAYOUT --- */}
           <div className={styles.locationGrid}>
             <div className={styles.locationSearch}>
                 <label className={styles.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -209,7 +199,6 @@ export default function Home() {
               </select>
             </div>
           </div>
-          {/* --- END OF RESTRUCTURED LAYOUT --- */}
 
           <button onClick={() => generateItinerary()} disabled={loading || !isMapsScriptLoaded} className={styles.sparkButton}>
             <Sparkles size={20} /> {loading ? 'Sparking...' : 'Spark Itinerary'}
