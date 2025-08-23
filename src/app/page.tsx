@@ -40,7 +40,7 @@ const LocationSearchInput = ({ value, onLocationSelect, isScriptLoaded }: { valu
 
   useEffect(() => {
     if (isScriptLoaded && window.google && inputRef.current && !autoCompleteRef.current) {
-      autoCompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, { types: ["(cities)"], componentRestrictions: { country: "in" } });
+      autoCompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current);
       autoCompleteRef.current.addListener("place_changed", () => {
         const place = autoCompleteRef.current?.getPlace();
         if (place?.geometry?.location && place.formatted_address) { onLocationSelect({ name: place.formatted_address, lat: place.geometry.location.lat(), lng: place.geometry.location.lng() }); setInputValue(place.formatted_address); }
@@ -55,7 +55,7 @@ const LocationSearchInput = ({ value, onLocationSelect, isScriptLoaded }: { valu
 
 // --- MAIN HOME COMPONENT ---
 export default function Home() {
-  const [location, setLocation] = useState<LocationState>({ name: 'Indiranagar, Bengaluru', lat: 12.9719, lng: 77.6412 });
+const [location, setLocation] = useState<LocationState>({ name: '', lat: null, lng: null }); // CHANGED THIS LINE
   const [radius, setRadius] = useState(5);
   const [groupType, setGroupType] = useState('Friends');
   const [duration, setDuration] = useState('Half-day (~4 hrs)');
