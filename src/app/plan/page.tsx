@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import React, { useState, useEffect } from 'react';
 import { getAuth, User } from 'firebase/auth';
 import { firebaseApp } from '@/lib/firebase';
@@ -9,7 +8,6 @@ import MapComponent from '@/app/components/MapComponent';
 import PlannerWizard from '@/app/components/PlannerWizard';
 import ItineraryPanel from '@/app/components/ItineraryPanel';
 import SignInModal from '@/app/components/SignInModal';
-import { UserDisplay } from '@/app/components/AuthButtons';
 import Header from '@/components/header';
 
 // --- TYPES ---
@@ -113,9 +111,16 @@ export default function PlanPage() {
       }
       const responseData = await response.json();
       
-      // FIX: Cast the responseData.stops to an array of ItineraryStop to resolve 'any' type error
-      const validStops: ItineraryStop[] = (responseData.stops as any[]).filter(
-        (stop: any) => typeof stop.lat === 'number' && typeof stop.lng === 'number'
+      // FIX: Replaced 'any' with `unknown` and performed type checks
+      const validStops: ItineraryStop[] = (responseData.stops as unknown[]).filter(
+        (stop): stop is ItineraryStop => 
+          typeof (stop as ItineraryStop).lat === 'number' && 
+          typeof (stop as ItineraryStop).lng === 'number' &&
+          typeof (stop as ItineraryStop).name === 'string' &&
+          typeof (stop as ItineraryStop).description === 'string' &&
+          typeof (stop as ItineraryStop).category === 'string' &&
+          typeof (stop as ItineraryStop).locked === 'boolean' &&
+          typeof (stop as ItineraryStop).placeId === 'string'
       );
       
       setItinerary(validStops);
@@ -157,7 +162,7 @@ export default function PlanPage() {
               setItinerary={setItinerary} 
               selectedStopIndex={selectedStopIndex} 
               setSelectedStopIndex={setSelectedStopIndex} 
-              onReshuffle={(currentFilters) => generateItinerary(currentFilters, true)} 
+              onReshuffle={() => generateItinerary(filters, true)} 
               onStartOver={handleStartOver} 
               loading={loading}
               filters={filters}

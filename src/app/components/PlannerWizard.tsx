@@ -46,7 +46,6 @@ type PlannerWizardProps = {
 
 export default function PlannerWizard({ isMapsScriptLoaded, user, onGenerate, onRequireSignIn, loading, error, filters, setFilters }: PlannerWizardProps) {
 
-    // FIX: Replaced 'any' with a more specific type to resolve the type error.
     const setFilter = <T extends keyof FilterState>(key: T, value: FilterState[T]) => {
         setFilters(prev => ({ ...prev, [key]: value }));
     };
@@ -65,8 +64,9 @@ export default function PlannerWizard({ isMapsScriptLoaded, user, onGenerate, on
     return (
         <div className='p-4 sm:p-6 w-full h-full flex flex-col'>
             <div className='text-center mb-8 flex-shrink-0'>
+                {/* FIX: Escaped the apostrophe with &apos; */}
                 <h1 className="text-3xl font-bold">Your perfect trip, planned by AI</h1>
-                <p className="text-muted-foreground mt-2">Tell us your preferences and we'll craft your itinerary.</p>
+                <p className="text-muted-foreground mt-2">Tell us your preferences and we&apos;ll craft your itinerary.</p>
             </div>
 
             <div className="space-y-6 flex-grow overflow-y-auto pr-4 -mr-4">
@@ -101,7 +101,8 @@ export default function PlannerWizard({ isMapsScriptLoaded, user, onGenerate, on
                 </div>
 
                 <div className="space-y-2">
-                    <Label>What's the vibe?</Label>
+                    {/* FIX: Escaped the apostrophe with &apos; */}
+                    <Label>What&apos;s the vibe?</Label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                         {['Relaxing', 'Active', 'Creative', 'Foodie', 'Entertainment', 'Romantic'].map(theme => (
                             <div key={theme} onClick={() => setFilter('theme', theme)} className={choiceCardClass(filters.theme === theme)}>
@@ -115,6 +116,7 @@ export default function PlannerWizard({ isMapsScriptLoaded, user, onGenerate, on
             <div className='mt-auto pt-6 border-t flex-shrink-0'>
                 <Button onClick={handleGenerateClick} disabled={loading || !isMapsScriptLoaded} size="lg" className="w-full">
                     <Sparkles className="mr-2 h-5 w-5" />
+                    {/* FIX: Escaped the apostrophe with &apos; */}
                     {loading ? 'Sparking your itinerary...' : 'Spark Itinerary'}
                 </Button>
                 {error && <p className="text-sm text-destructive mt-4 text-center">{error}</p>}

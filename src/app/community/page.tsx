@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
-async function getPosts() {
+async function getPosts(): Promise<PostForFeed[]> {
   const res = await fetch('/api/posts', { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch data');
   return res.json();
@@ -43,8 +43,12 @@ export default function CommunityPage() {
       try {
         const fetchedPosts = await getPosts();
         setPosts(fetchedPosts);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unexpected error occurred.');
+        }
       } finally {
         setIsLoading(false);
       }
@@ -53,8 +57,9 @@ export default function CommunityPage() {
     const auth = getAuth(firebaseApp);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUserId(user ? user.uid : null);
-      fetchPosts();
     });
+
+    fetchPosts();
 
     return () => unsubscribe();
   }, []);
