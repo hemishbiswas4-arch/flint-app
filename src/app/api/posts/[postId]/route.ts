@@ -4,11 +4,11 @@ import prisma from "@/lib/prisma";
 
 export async function DELETE(
   request: NextRequest,
-  // FIX: This signature directly addresses the type error from the build log.
-  // The build environment expects params to be a Promise.
-  context: { params: { postId: string } }
+  context: { params: Promise<{ postId: string }> } // 👈 fix
 ) {
   try {
+    const { postId } = await context.params; // 👈 must await
+
     const admin = initializeFirebaseAdmin();
     const authHeader = request.headers.get("authorization");
 
@@ -21,7 +21,7 @@ export async function DELETE(
 
     // Find the post
     const post = await prisma.post.findUnique({
-      where: { id: context.params.postId },
+      where: { id: postId },
     });
 
     if (!post) {
@@ -34,7 +34,7 @@ export async function DELETE(
 
     // Delete it
     await prisma.post.delete({
-      where: { id: context.params.postId },
+      where: { id: postId },
     });
 
     return NextResponse.json({ success: true }, { status: 200 });
@@ -44,8 +44,7 @@ export async function DELETE(
   }
 }
 
-// Add an empty GET function to make the route handler valid, as the build log
-// is also complaining about missing properties of the route handler.
+// Optional: keep this for unsupported methods
 export async function GET() {
   return NextResponse.json({ message: "Method not allowed" }, { status: 405 });
 }
