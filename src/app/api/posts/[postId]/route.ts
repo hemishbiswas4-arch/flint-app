@@ -5,10 +5,10 @@ import prisma from "@/lib/prisma";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { postId: string } }
+  context: { params: { postId: string } }
 ) {
   try {
-    const admin = initializeFirebaseAdmin(); // ✅ ensures app is initialized
+    const admin = initializeFirebaseAdmin();
     const authHeader = request.headers.get("authorization");
 
     if (!authHeader?.startsWith("Bearer ")) {
@@ -16,11 +16,11 @@ export async function DELETE(
     }
 
     const idToken = authHeader.split(" ")[1];
-    const decoded = await admin.auth().verifyIdToken(idToken); // ✅ use admin from initializeFirebaseAdmin
+    const decoded = await admin.auth().verifyIdToken(idToken);
 
     // Find the post
     const post = await prisma.post.findUnique({
-      where: { id: params.postId },
+      where: { id: context.params.postId },
     });
 
     if (!post) {
@@ -33,7 +33,7 @@ export async function DELETE(
 
     // Delete it
     await prisma.post.delete({
-      where: { id: params.postId },
+      where: { id: context.params.postId },
     });
 
     return NextResponse.json({ success: true }, { status: 200 });
