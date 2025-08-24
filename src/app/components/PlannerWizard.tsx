@@ -27,9 +27,9 @@ const LocationSearchInput = ({ value, onLocationSelect, isMapsScriptLoaded }: { 
             });
         }
     }, [isMapsScriptLoaded, onLocationSelect]);
-    
+
     useEffect(() => { setInputValue(value); }, [value]);
-    
+
     return <Input ref={inputRef} type="text" value={inputValue} onChange={e => setInputValue(e.target.value)} placeholder={isMapsScriptLoaded ? "Search a city..." : "Loading Maps..."} disabled={!isMapsScriptLoaded} />;
 };
 
@@ -45,8 +45,9 @@ type PlannerWizardProps = {
 };
 
 export default function PlannerWizard({ isMapsScriptLoaded, user, onGenerate, onRequireSignIn, loading, error, filters, setFilters }: PlannerWizardProps) {
-    
-    const setFilter = (key: keyof FilterState, value: any) => {
+
+    // FIX: Replaced 'any' with a more specific type to resolve the type error.
+    const setFilter = <T extends keyof FilterState>(key: T, value: FilterState[T]) => {
         setFilters(prev => ({ ...prev, [key]: value }));
     };
 
@@ -58,10 +59,9 @@ export default function PlannerWizard({ isMapsScriptLoaded, user, onGenerate, on
         }
     };
 
-    const choiceCardClass = (isSelected: boolean) => 
+    const choiceCardClass = (isSelected: boolean) =>
         `cursor-pointer text-center p-4 border-2 rounded-lg transition-all ${isSelected ? 'border-primary shadow-lg scale-105' : 'border-border hover:border-foreground/50'}`;
 
-    // FIX: The main container is now a flex column that fills the available height.
     return (
         <div className='p-4 sm:p-6 w-full h-full flex flex-col'>
             <div className='text-center mb-8 flex-shrink-0'>
@@ -69,13 +69,12 @@ export default function PlannerWizard({ isMapsScriptLoaded, user, onGenerate, on
                 <p className="text-muted-foreground mt-2">Tell us your preferences and we'll craft your itinerary.</p>
             </div>
 
-            {/* FIX: This div now handles scrolling for oversized content. */}
             <div className="space-y-6 flex-grow overflow-y-auto pr-4 -mr-4">
                 <div className="space-y-2">
                     <Label htmlFor="location">Where are you going?</Label>
                     <LocationSearchInput value={filters.location.name} onLocationSelect={(loc) => setFilter('location', loc)} isMapsScriptLoaded={isMapsScriptLoaded} />
                 </div>
-                
+
                 <div className="space-y-2">
                     <div className="flex justify-between">
                         <Label>Search Radius</Label>
@@ -89,7 +88,7 @@ export default function PlannerWizard({ isMapsScriptLoaded, user, onGenerate, on
                         onValueChange={(value: number[]) => setFilter('radius', value[0])}
                     />
                 </div>
-                
+
                 <div className="space-y-2">
                     <Label>Who are you traveling with?</Label>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -100,7 +99,7 @@ export default function PlannerWizard({ isMapsScriptLoaded, user, onGenerate, on
                         ))}
                     </div>
                 </div>
-                
+
                 <div className="space-y-2">
                     <Label>What's the vibe?</Label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

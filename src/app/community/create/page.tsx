@@ -1,3 +1,4 @@
+// src/app/community/create/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import Link from 'next/link';
 import { FileText, Image as ImageIcon, Map, ArrowRight, ArrowLeft } from 'lucide-react';
 import SignInModal from '@/app/components/SignInModal';
 
@@ -85,11 +85,10 @@ export default function CreatePostPage() {
         setError(null);
 
         const idToken = await user.getIdToken();
-        
-        // FIX: Add displayOrder to the places array before sending
+
         const placesWithOrder = path.map((place, index) => ({
             ...place,
-            displayOrder: index, // Assigns the array index as the display order
+            displayOrder: index,
         }));
 
         try {
@@ -102,7 +101,7 @@ export default function CreatePostPage() {
                 body: JSON.stringify({
                     title,
                     textContent,
-                    places: placesWithOrder, // Use the new array with displayOrder
+                    places: placesWithOrder,
                     images: imageUrls.map(url => ({ imageUrl: url })),
                 }),
             });
@@ -115,9 +114,13 @@ export default function CreatePostPage() {
             const newPost = await response.json();
             router.push(`/community/posts/${newPost.id}`);
 
-        } catch (err: any) {
+        } catch (err: unknown) { // Change `any` to `unknown`
+            let errorMessage = "An unexpected error occurred. Please try again.";
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            }
             console.error("Failed to create post:", err);
-            setError(err.message || "An unexpected error occurred. Please try again.");
+            setError(errorMessage);
         } finally {
             setIsSubmitting(false);
         }

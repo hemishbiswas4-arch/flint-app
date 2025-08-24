@@ -42,13 +42,22 @@ export default function MapComponent({ stops, selectedStopIndex, onMarkerClick }
     if (directionsResult && directionsRendererRef.current) {
       directionsRendererRef.current.setDirections(directionsResult);
     } else {
-      directionsRendererRef.current?.setDirections({ routes: [] } as any);
+      directionsRendererRef.current?.setDirections({
+        routes: [],
+        request: {
+          origin: { placeId: '' },
+          destination: { placeId: '' },
+          travelMode: google.maps.TravelMode.DRIVING
+        }
+      });
     }
   }, [directionsResult]);
 
   // Update markers
   useEffect(() => {
+    // Clean up previous markers
     markers.forEach(marker => marker.setMap(null));
+
     const newMarkers: google.maps.Marker[] = [];
 
     if (mapRef.current && stops.length > 0) {
@@ -87,8 +96,10 @@ export default function MapComponent({ stops, selectedStopIndex, onMarkerClick }
       setMarkers(newMarkers);
     }
 
-    return () => newMarkers.forEach(marker => marker.setMap(null));
-  }, [stops, selectedStopIndex, onMarkerClick]);
+    return () => {
+      newMarkers.forEach(marker => marker.setMap(null));
+    };
+  }, [stops, selectedStopIndex, onMarkerClick, markers]);
 
   return <div id="map" style={{ width: '100%', height: '100%', backgroundColor: '#111827' }} />;
 }

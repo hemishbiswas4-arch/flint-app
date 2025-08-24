@@ -112,9 +112,12 @@ export default function PlanPage() {
         throw new Error(errorData.message || 'AI generation failed');
       }
       const responseData = await response.json();
-      const validStops: ItineraryStop[] = responseData.stops.filter(
+      
+      // FIX: Cast the responseData.stops to an array of ItineraryStop to resolve 'any' type error
+      const validStops: ItineraryStop[] = (responseData.stops as any[]).filter(
         (stop: any) => typeof stop.lat === 'number' && typeof stop.lng === 'number'
       );
+      
       setItinerary(validStops);
       const newSeen = new Set(isReshuffle ? seenPlaces : []);
       validStops.forEach(stop => newSeen.add(stop.name));
@@ -143,7 +146,6 @@ export default function PlanPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      {/* 2. REPLACE THE OLD <header> BLOCK WITH THIS LINE */}
       <Header user={user} isAuthLoading={isAuthLoading} />
 
       <main className="flex-1 w-full grid grid-cols-1 lg:grid-cols-[40%_60%] xl:grid-cols-[30%_70%]">
