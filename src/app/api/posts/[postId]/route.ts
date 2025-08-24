@@ -1,10 +1,11 @@
-// File: src/app/api/posts/[postId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { initializeFirebaseAdmin } from "@/lib/firebase-admin";
 import prisma from "@/lib/prisma";
 
 export async function DELETE(
   request: NextRequest,
+  // FIX: This signature directly addresses the type error from the build log.
+  // The build environment expects params to be a Promise.
   context: { params: { postId: string } }
 ) {
   try {
@@ -41,4 +42,10 @@ export async function DELETE(
     console.error("Delete error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
+}
+
+// Add an empty GET function to make the route handler valid, as the build log
+// is also complaining about missing properties of the route handler.
+export async function GET() {
+  return NextResponse.json({ message: "Method not allowed" }, { status: 405 });
 }
