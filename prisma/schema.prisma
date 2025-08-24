@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ## AUTHENTICATION & USER MODELS ##
+// Your existing User model, updated with relations to the new Post models
+model User {
+  id              String      @id
+  name            String?
+  email           String?     @unique
+  emailVerified   DateTime?   @map("emailVerified") @db.Timestamptz(6)
+  image           String?
+  usageCount      Int         @default(10) @map("usageCount")
+
+  // New relations for the Community Hub
+  posts           Post[]
+  likes           PostLike[]
+
+  @@map("users")
+}
+
+// Your existing auth tables - preserved as is
+model accounts {
+  id                Int     @id @default(autoincrement())
+  userId            Int
+  type              String  @db.VarChar(255)
+  provider          String  @db.VarChar(255)
+  providerAccountId String  @db.VarChar(255)
+  refresh_token     String?
+  access_token      String?
+  expires_at        BigInt?
+  id_token          String?
+  scope             String?
+  session_state     String?
+  token_type        String?
+}
+
+model sessions {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  expires      DateTime @db.Timestamptz(6)
+  sessionToken String   @db.VarChar(255)
+}
+
+model verification_token {
+  identifier String
+  expires    DateTime @db.Timestamptz(6)
+  token      String
+
+  @@id([identifier, token])
+}
+
+
+// ## NEW COMMUNITY HUB MODELS ##
+// Replaces the old 'editorials' table
+model Post {
+  id          String   @id @default(uuid())
+  title       String
+  textContent String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  places PostPlace[]
+  images PostImage[]
+  likes  PostLike[]
+}
+
+model PostPlace {
+  id            String @id @default(uuid())
+  googlePlaceId String
+  name          String
+  lat           Float
+  lng           Float
+  displayOrder  Int
+
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model PostImage {
+  id       String @id @default(uuid())
+  imageUrl String
+
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model PostLike {
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  postId String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+}

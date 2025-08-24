@@ -1,62 +1,121 @@
-// Location: src/app/components/MapComponent.tsx
+// File: src/app/components/MapComponent.tsx
 'use client';
-import React, { memo, useRef, useEffect } from 'react';
-import styles from '@/app/Home.module.css';
 
-// Define the Stop type here so the component is self-contained
-type ItineraryStop = {
-  lat: number;
-  lng: number;
+import React, { useRef, useEffect, useState } from 'react';
+import { useDirections } from '../hooks/useDirections';
+import { ItineraryStop } from '../plan/page';
+
+type MapComponentProps = {
+    stops: ItineraryStop[];
+    selectedStopIndex: number | null;
+    onMarkerClick: (index: number) => void;
 };
 
-const MapComponent = memo(({ stops, selectedStopIndex, onMarkerClick }: { stops: ItineraryStop[], selectedStopIndex: number | null, onMarkerClick: (index: number) => void }) => {
-    const mapRef = useRef<HTMLDivElement>(null);
-    const googleMapRef = useRef<google.maps.Map | null>(null);
-    const markersRef = useRef<(google.maps.Marker | null)[]>([]);
+export default function MapComponent({ stops, selectedStopIndex, onMarkerClick }: MapComponentProps) {
+    const mapRef = useRef<google.maps.Map | null>(null);
     const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
-
+    const directionsResult = useDirections(stops);
+    const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+    
+    // Initialize map and directions renderer
     useEffect(() => {
-        if (mapRef.current && !googleMapRef.current) {
-            googleMapRef.current = new window.google.maps.Map(mapRef.current, {
-                center: { lat: 12.9716, lng: 77.5946 },
+        if (!mapRef.current && window.google) {
+            mapRef.current = new window.google.maps.Map(document.getElementById('map') as HTMLElement, {
+                center: { lat: 34.052235, lng: -118.243683 },
                 zoom: 12,
                 disableDefaultUI: true,
-                styles: [ { "featureType": "all", "elementType": "labels.text.fill", "stylers": [ { "color": "#ffffff" } ] }, { "featureType": "all", "elementType": "labels.text.stroke", "stylers": [ { "color": "#000000" }, { "lightness": 13 } ] }, { "featureType": "administrative", "elementType": "geometry.fill", "stylers": [ { "color": "#000000" } ] }, { "featureType": "administrative", "elementType": "geometry.stroke", "stylers": [ { "color": "#144b53" }, { "lightness": 14 }, { "weight": 1.4 } ] }, { "featureType": "landscape", "elementType": "all", "stylers": [ { "color": "#08304b" } ] }, { "featureType": "poi", "elementType": "geometry", "stylers": [ { "color": "#0c4152" }, { "lightness": 5 } ] }, { "featureType": "road.highway", "elementType": "geometry.fill", "stylers": [ { "color": "#000000" } ] }, { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [ { "color": "#0b434f" }, { "lightness": 25 } ] }, { "featureType": "road.arterial", "elementType": "geometry.fill", "stylers": [ { "color": "#000000" } ] }, { "featureType": "road.arterial", "elementType": "geometry.stroke", "stylers": [ { "color": "#0b3d51" }, { "lightness": 16 } ] }, { "featureType": "road.local", "elementType": "geometry", "stylers": [ { "color": "#000000" } ] }, { "featureType": "transit", "elementType": "all", "stylers": [ { "color": "#146474" } ] }, { "featureType": "water", "elementType": "all", "stylers": [ { "color": "#021019" } ] } ]
+                styles: [ // Dark theme styles
+                    { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+                    { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+                    { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+                    { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+                    { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+                    { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#263c3f" }] },
+                    { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#6b9a76" }] },
+                    { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+                    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+                    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] },
+                    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] },
+                    { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#1f2835" }] },
+                    { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#f3d19c" }] },
+                    { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] },
+                    { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+                    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] },
+                    { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] },
+                ],
             });
+
+            directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
+                suppressMarkers: true, // We will use our own custom markers
+                polylineOptions: {
+                    strokeColor: '#818cf8',
+                    strokeWeight: 4,
+                    strokeOpacity: 0.8,
+                },
+            });
+            directionsRendererRef.current.setMap(mapRef.current);
         }
     }, []);
 
+    // Update directions on the map
     useEffect(() => {
-        if (!googleMapRef.current || !window.google?.maps?.DirectionsService || !stops) return;
-        
-        markersRef.current.forEach(marker => marker?.setMap(null));
-        markersRef.current = [];
-        if (directionsRendererRef.current) { directionsRendererRef.current.setMap(null); }
-        if (stops.length === 0) return;
-
-        const bounds = new window.google.maps.LatLngBounds();
-        markersRef.current = stops.map((stop, index) => {
-            const position = { lat: stop.lat, lng: stop.lng };
-            bounds.extend(position);
-            const isSelected = index === selectedStopIndex;
-            const marker = new window.google.maps.Marker({ position, map: googleMapRef.current, label: { text: `${index + 1}`, color: isSelected ? '#111827' : '#f9fafb' }, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 15, fillColor: isSelected ? '#ffffff' : '#4f46e5', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }, });
-            marker.addListener('click', () => onMarkerClick(index));
-            return marker;
-        });
-        googleMapRef.current.fitBounds(bounds, 100);
-
-        if (stops.length > 1) {
-            const directionsService = new window.google.maps.DirectionsService();
-            directionsRendererRef.current = new window.google.maps.DirectionsRenderer({ map: googleMapRef.current, suppressMarkers: true, polylineOptions: { strokeColor: '#c7d2fe', strokeOpacity: 0.9, strokeWeight: 5 } });
-            const origin = { lat: stops[0].lat, lng: stops[0].lng };
-            const destination = { lat: stops[stops.length - 1].lat, lng: stops[stops.length - 1].lng };
-            const waypoints = stops.slice(1, -1).map(stop => ({ location: { lat: stop.lat, lng: stop.lng }, stopover: true }));
-            directionsService.route({ origin, destination, waypoints, travelMode: google.maps.TravelMode.DRIVING }, (result, status) => { if (status === 'OK' && directionsRendererRef.current) { directionsRendererRef.current.setDirections(result); } });
+        if (directionsResult && directionsRendererRef.current) {
+            directionsRendererRef.current.setDirections(directionsResult);
+        } else if (directionsRendererRef.current) {
+            // This is the corrected line to clear the route
+            directionsRendererRef.current.setDirections(null);
         }
+    }, [directionsResult]);
+
+    // Update markers and map bounds
+    useEffect(() => {
+        // Clear previous markers
+        markers.forEach(marker => marker.setMap(null));
+        const newMarkers: google.maps.Marker[] = [];
+
+        if (mapRef.current && stops.length > 0) {
+            const bounds = new window.google.maps.LatLngBounds();
+            
+            stops.forEach((stop, index) => {
+                const position = new window.google.maps.LatLng(stop.lat, stop.lng);
+                bounds.extend(position);
+
+                const isSelected = selectedStopIndex === index;
+
+                const marker = new window.google.maps.Marker({
+                    position,
+                    map: mapRef.current,
+                    label: {
+                        text: `${index + 1}`,
+                        color: isSelected ? '#ffffff' : '#111827',
+                        fontWeight: 'bold',
+                    },
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: isSelected ? 12 : 9,
+                        fillColor: isSelected ? '#818cf8' : '#ffffff',
+                        fillOpacity: 1,
+                        strokeWeight: 1,
+                        strokeColor: isSelected ? '#ffffff' : '#818cf8',
+                    },
+                    zIndex: isSelected ? 10 : 1,
+                });
+                
+                marker.addListener('click', () => onMarkerClick(index));
+                newMarkers.push(marker);
+            });
+            
+            mapRef.current.fitBounds(bounds, 100); // 100px padding
+            setMarkers(newMarkers);
+        }
+        
+        // Cleanup function
+        return () => {
+            newMarkers.forEach(marker => marker.setMap(null));
+        };
     }, [stops, selectedStopIndex, onMarkerClick]);
 
-    return <div ref={mapRef} className={styles.map} />;
-});
-MapComponent.displayName = 'MapComponent';
 
-export default MapComponent;
+    return <div id="map" style={{ width: '100%', height: '100%', backgroundColor: '#111827' }} />;
+}

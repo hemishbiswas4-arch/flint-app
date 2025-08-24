@@ -1,0 +1,152 @@
+/* File: src/app/plan.module.css */
+.wizard {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 1rem; /* Reduced padding for a compact fit */
+  overflow-y: hidden;
+  height: 100%;
+}
+
+.stepTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: #f0f0f0;
+}
+
+.stepSubtitle {
+  font-size: 1rem;
+  color: #9ca3af;
+  margin-bottom: 0.75rem; /* Reduced margin */
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem; /* Reduced gap */
+  margin-top: 0.5rem; /* Reduced margin */
+}
+
+.themeGrid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.card {
+  box-sizing: border-box;
+  background-color: rgba(31, 41, 55, 0.7);
+  padding: 1rem; /* Reduced padding */
+  border-radius: 0.75rem;
+  border: 1px solid #374151;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-align: center;
+  font-weight: 600;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  border-color: #6b7280;
+}
+
+.cardSelected {
+  border-color: #818cf8;
+  background-color: #4f46e5;
+  color: white;
+  transform: scale(1.03);
+}
+
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem; /* Reduced margin */
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.sliderLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #9ca3af;
+  margin-bottom: 0.5rem;
+}
+
+.slider {
+  margin: 5px 0; /* Reduced margin */
+}
+
+/* Itinerary Panel Styles */
+.itineraryPanel {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 2.5rem;
+  overflow-y: auto;
+}
+
+.itineraryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-shrink: 0;
+}
+
+.itineraryTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.itineraryList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.stopCard {
+  background-color: rgba(31, 41, 55, 0.7);
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+  border: 1px solid #374151;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.stopCardSelected {
+  border-color: #818cf8;
+  transform: scale(1.02);
+}
+
+.stopHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.stopName {
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: #f0f0f0;
+  margin-right: 1rem;
+}
+
+.stopActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stopDescription {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  line-height: 1.5;
+}

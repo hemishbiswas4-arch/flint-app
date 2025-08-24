@@ -1,21 +1,24 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import { Providers } from "./providers"; // Should have curly braces {}
+import './globals.css';
+import { Inter } from 'next/font/google';
+import { Toaster } from "sonner"; // FIX: Changed path from "@/components/ui/sonner"
 
-export const metadata: Metadata = {
-  title: "Outplann",
-  description: "Spark your next adventure.",
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata = {
+  title: 'Outplann - AI Itinerary Generator',
+  description: 'Your AI-powered trip planner',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en">
-      <body>
-        <Providers>{children}</Providers>
+      <body className={inter.className}>
+        {children}
+        <Toaster richColors />
       </body>
     </html>
   );
