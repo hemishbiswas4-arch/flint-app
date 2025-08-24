@@ -1,7 +1,9 @@
+// src/app/components/PostCard.tsx
 import Link from 'next/link';
 import { MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { LikeButton } from './LikeButton'; // Correctly import as a named export
+import LikeButton from './LikeButton'; // ✅ correct
+
 
 export type PostForFeed = {
   id: string;
