@@ -13,7 +13,7 @@ interface PostRequestData {
     lng: number;
     displayOrder: number;
   }[];
-  images?: { imageUrl?: string | null }[];
+  images?: { imageUrl?: string | null }[] | string[];
 }
 
 // -------------------------------
@@ -74,9 +74,12 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    const postsWithFlatImages = posts.map((post: typeof posts[number]) => ({
+    // Explicitly type only what we need to avoid implicit `any`
+    const postsWithFlatImages = (
+      posts as Array<{ images: Array<{ imageUrl: string }> }>
+    ).map((post) => ({
       ...post,
-      images: post.images.map((img: { imageUrl: string }) => img.imageUrl),
+      images: post.images.map((img) => img.imageUrl),
     }));
 
     return NextResponse.json(postsWithFlatImages, { status: 200 });
@@ -101,7 +104,12 @@ export async function POST(request: NextRequest) {
 
   const firebaseUid = decodedToken.uid;
   const email = decodedToken.email ?? "";
-  const picture = (decodedToken as any).picture ?? null;
+
+  // Safer extraction without `any`
+  const picture =
+    typeof (decodedToken as { picture?: unknown }).picture === "string"
+      ? (decodedToken as { picture: string }).picture
+      : null;
 
   try {
     // Ensure user exists or update
@@ -114,7 +122,10 @@ export async function POST(request: NextRequest) {
     const body: PostRequestData = await request.json();
     const { title, textContent, places = [], images = [] } = body;
 
-    console.log("📩 Incoming POST /api/posts body:", JSON.stringify(body, null, 2));
+    console.log(
+      "📩 Incoming POST /api/posts body:",
+      JSON.stringify(body, null, 2)
+    );
 
     if (!title || !textContent) {
       console.error("❌ Missing title or textContent:", { title, textContent });
@@ -124,7 +135,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ Handle images flexibly (string[] or { imageUrl }[])
+    // Handle images flexibly (string[] or { imageUrl }[])
     let validImages: string[] = [];
 
     if (Array.isArray(images)) {
