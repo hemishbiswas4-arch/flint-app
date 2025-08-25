@@ -1,18 +1,20 @@
-// File: src/lib/firebase-admin.ts
-import admin from "firebase-admin";
+// src/lib/firebase-admin.ts
+import * as admin from "firebase-admin";
+
+let adminApp: admin.app.App | null = null;
 
 export function initializeFirebaseAdmin() {
+  if (adminApp) return adminApp;
+
   if (!admin.apps.length) {
-    const serviceAccount = JSON.parse(
-      process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
-    );
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+    adminApp = admin.initializeApp({
+      // 🔑 For production: set GOOGLE_APPLICATION_CREDENTIALS env var
+      // or use admin.credential.cert(serviceAccountJson)
+      credential: admin.credential.applicationDefault(),
     });
+  } else {
+    adminApp = admin.app();
   }
-  return admin;
-}
 
-// If you want to use admin directly too:
-export { admin };
+  return adminApp;
+}

@@ -1,124 +1,179 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
-import { auth } from 'firebase-admin';
-import prisma from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+// src/app/api/posts/route.ts
+import { NextRequest, NextResponse } from "next/server";
+import { initializeFirebaseAdmin } from "@/lib/firebase-admin";
+import prisma from "@/lib/prisma";
 
-// Define the types for the data being received
 interface PostRequestData {
-    title: string;
-    textContent: string;
-    places?: {
-        googlePlaceId: string;
-        name: string;
-        lat: number;
-        lng: number;
-        displayOrder: number;
-    }[];
-    images?: {
-        imageUrl: string;
-    }[];
+  title: string;
+  textContent: string;
+  places?: {
+    googlePlaceId: string;
+    name: string;
+    lat: number;
+    lng: number;
+    displayOrder: number;
+  }[];
+  images?: { imageUrl?: string | null }[];
 }
 
-// Define the type for the Prisma query result
-const postWithRelations = Prisma.validator<Prisma.PostDefaultArgs>()({
-    include: {
-        author: { select: { id: true, email: true } },
+// -------------------------------
+// Helper: Get currently authenticated user
+// -------------------------------
+async function getAuthenticatedUser(request: NextRequest) {
+  const adminApp = initializeFirebaseAdmin();
+
+  const sessionCookie =
+    request.cookies.get("session")?.value ??
+    request.cookies.get("__session")?.value;
+
+  if (sessionCookie) {
+    try {
+      return await adminApp.auth().verifySessionCookie(sessionCookie, true);
+    } catch {
+      // ignore and fall through
+    }
+  }
+
+  const authorization =
+    request.headers.get("authorization") ??
+    request.headers.get("Authorization");
+
+  if (authorization?.startsWith("Bearer ")) {
+    const idToken = authorization.slice("Bearer ".length);
+    try {
+      return await adminApp.auth().verifyIdToken(idToken);
+    } catch (error) {
+      console.error("❌ Error verifying Bearer token:", error);
+      return null;
+    }
+  }
+
+  return null;
+}
+
+// -------------------------------
+// ✅ GET /api/posts
+// -------------------------------
+export async function GET() {
+  try {
+    const posts = await prisma.post.findMany({
+      include: {
+        author: { select: { id: true, email: true, image: true } },
         images: { select: { imageUrl: true } },
         likes: { select: { userId: true } },
-        _count: { select: { likes: true } },
-    },
-});
+        comments: {
+          select: {
+            id: true,
+            text: true,
+            createdAt: true,
+            user: { select: { id: true, email: true, image: true } },
+          },
+        },
+        _count: { select: { likes: true, comments: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
 
-type PostWithRelations = Prisma.PostGetPayload<typeof postWithRelations>;
+    const postsWithFlatImages = posts.map((post: typeof posts[number]) => ({
+      ...post,
+      images: post.images.map((img: { imageUrl: string }) => img.imageUrl),
+    }));
 
-
-// Helper to get current user
-async function getAuthenticatedUser(request: NextRequest): Promise<auth.DecodedIdToken | null> {
-    await initializeFirebaseAdmin();
-    const authorization = request.headers.get("Authorization");
-    if (authorization?.startsWith("Bearer ")) {
-        const idToken = authorization.split("Bearer ")[1];
-        try {
-            return await auth().verifyIdToken(idToken);
-        } catch (error) {
-            console.error("Error verifying token:", error);
-            return null;
-        }
-    }
-    return null;
+    return NextResponse.json(postsWithFlatImages, { status: 200 });
+  } catch (error) {
+    console.error("❌ Failed to fetch posts:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch posts." },
+      { status: 500 }
+    );
+  }
 }
 
-// ✅ GET /api/posts -> fetch posts for community feed
-export async function GET() {
-    try {
-        const posts: PostWithRelations[] = await prisma.post.findMany({
-            include: {
-                author: { select: { id: true, email: true } },
-                images: { select: { imageUrl: true } },
-                likes: { select: { userId: true } },
-                _count: { select: { likes: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
-
-        // The posts array is already typed, so no explicit casting is needed.
-        return NextResponse.json(posts, { status: 200 });
-    } catch (error) {
-        console.error("Failed to fetch posts:", error);
-        return NextResponse.json({ error: "Failed to fetch posts." }, { status: 500 });
-    }
-}
-
-// ✅ POST /api/posts -> create new post
+// -------------------------------
+// ✅ POST /api/posts
+// -------------------------------
 export async function POST(request: NextRequest) {
-    const decodedToken = await getAuthenticatedUser(request);
+  const decodedToken = await getAuthenticatedUser(request);
 
-    if (!decodedToken || !decodedToken.uid) {
-        return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  if (!decodedToken?.uid) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const firebaseUid = decodedToken.uid;
+  const email = decodedToken.email ?? "";
+  const picture = (decodedToken as any).picture ?? null;
+
+  try {
+    // Ensure user exists or update
+    const user = await prisma.user.upsert({
+      where: { id: firebaseUid },
+      update: { email, image: picture },
+      create: { id: firebaseUid, email, image: picture },
+    });
+
+    const body: PostRequestData = await request.json();
+    const { title, textContent, places = [], images = [] } = body;
+
+    console.log("📩 Incoming POST /api/posts body:", JSON.stringify(body, null, 2));
+
+    if (!title || !textContent) {
+      console.error("❌ Missing title or textContent:", { title, textContent });
+      return NextResponse.json(
+        { error: "Title and text content are required." },
+        { status: 400 }
+      );
     }
 
-    const { uid: firebaseUid, email, picture } = decodedToken;
+    // ✅ Handle images flexibly (string[] or { imageUrl }[])
+    let validImages: string[] = [];
 
-    try {
-        const user = await prisma.user.upsert({
-            where: { id: firebaseUid },
-            update: { email: email!, image: picture },
-            create: { id: firebaseUid, email: email!, image: picture },
-        });
-
-        const body: PostRequestData = await request.json();
-        const { title, textContent, places = [], images = [] } = body;
-
-        if (!title || !textContent) {
-            return NextResponse.json({ error: "Title and text content are required." }, { status: 400 });
-        }
-
-        const newPost = await prisma.post.create({
-            data: {
-                title,
-                textContent,
-                authorId: user.id,
-                places: {
-                    create: places.map(place => ({
-                        googlePlaceId: place.googlePlaceId,
-                        name: place.name,
-                        lat: place.lat,
-                        lng: place.lng,
-                        displayOrder: place.displayOrder,
-                    })),
-                },
-                images: {
-                    create: images.map(image => ({
-                        imageUrl: image.imageUrl,
-                    })),
-                },
-            },
-        });
-
-        return NextResponse.json(newPost, { status: 201 });
-    } catch (error) {
-        console.error("Failed to create post:", error);
-        return NextResponse.json({ error: "Failed to create post." }, { status: 500 });
+    if (Array.isArray(images)) {
+      if (typeof images[0] === "string") {
+        validImages = (images as string[]).filter(
+          (url) => !!url && url.trim().length > 0
+        );
+      } else {
+        validImages = (images as { imageUrl?: string | null }[])
+          .map((img) => img?.imageUrl?.trim())
+          .filter((url): url is string => !!url && url.length > 0);
+      }
     }
+
+    console.log("🖼️ Valid images to insert:", validImages);
+
+    const newPost = await prisma.post.create({
+      data: {
+        title,
+        textContent,
+        authorId: user.id,
+        places: {
+          create: places.map((place) => ({
+            googlePlaceId: place.googlePlaceId,
+            name: place.name,
+            lat: place.lat,
+            lng: place.lng,
+            displayOrder: place.displayOrder,
+          })),
+        },
+        images: {
+          create: validImages.map((url) => ({ imageUrl: url })),
+        },
+      },
+      include: {
+        author: { select: { id: true, email: true, image: true } },
+        images: true,
+        places: true,
+      },
+    });
+
+    console.log("✅ Post created with ID:", newPost.id);
+
+    return NextResponse.json(newPost, { status: 201 });
+  } catch (error) {
+    console.error("🔥 Failed to create post:", error);
+    return NextResponse.json(
+      { error: "Failed to create post." },
+      { status: 500 }
+    );
+  }
 }

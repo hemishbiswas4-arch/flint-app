@@ -1,3 +1,5 @@
+// file: prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,23 +10,22 @@ datasource db {
 }
 
 // ## AUTHENTICATION & USER MODELS ##
-// Your existing User model, updated with relations to the new Post models
 model User {
-  id              String      @id
-  name            String?
-  email           String?     @unique
-  emailVerified   DateTime?   @map("emailVerified") @db.Timestamptz(6)
-  image           String?
-  usageCount      Int         @default(10) @map("usageCount")
+  id            String      @id                          // Firebase UID
+  name          String?
+  email         String?     @unique
+  emailVerified DateTime?   @map("emailVerified") @db.Timestamptz(6)
+  image         String?
+  usageCount    Int         @default(10) @map("usageCount")
 
-  // New relations for the Community Hub
-  posts           Post[]
-  likes           PostLike[]
+  // Relations
+  posts     Post[]
+  likes     PostLike[]
+  comments  Comment[]
 
   @@map("users")
 }
 
-// Your existing auth tables - preserved as is
 model accounts {
   id                Int     @id @default(autoincrement())
   userId            Int
@@ -55,22 +56,21 @@ model verification_token {
   @@id([identifier, token])
 }
 
-
-// ## NEW COMMUNITY HUB MODELS ##
-// Replaces the old 'editorials' table
+// ## COMMUNITY HUB MODELS ##
 model Post {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   title       String
   textContent String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   authorId String
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author   User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  places PostPlace[]
-  images PostImage[]
-  likes  PostLike[]
+  places   PostPlace[]
+  images   PostImage[]
+  likes    PostLike[]
+  comments Comment[]     // ✅ relation to comments
 }
 
 model PostPlace {
@@ -102,5 +102,17 @@ model PostLike {
   postId String
   post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  @@id([userId, postId])
+  @@id([userId, postId]) // ✅ prevents duplicate likes
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  postId String
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
 }

@@ -102,7 +102,8 @@ export default function CreatePostPage() {
                     title,
                     textContent,
                     places: placesWithOrder,
-                    images: imageUrls.map(url => ({ imageUrl: url })),
+                    // ✅ only send real URLs
+                    images: imageUrls.filter((url) => url && url.trim() !== ""),
                 }),
             });
 
@@ -114,7 +115,7 @@ export default function CreatePostPage() {
             const newPost = await response.json();
             router.push(`/community/posts/${newPost.id}`);
 
-        } catch (err: unknown) { // Change `any` to `unknown`
+        } catch (err: unknown) {
             let errorMessage = "An unexpected error occurred. Please try again.";
             if (err instanceof Error) {
                 errorMessage = err.message;
@@ -178,10 +179,14 @@ export default function CreatePostPage() {
                                     </div>
                                 </div>
                             )}
-                            {step === 3 && (
+                            {step === 3 && user && (
                                 <div className="space-y-2 animate-in fade-in-50">
-                                    <Label className="text-lg flex items-center gap-2"><ImageIcon size={16} /> Add Photos</Label>
-                                    <ImageUploader onUploadComplete={setImageUrls} />
+                                    <Label className="text-lg flex items-center gap-2">
+                                        <ImageIcon size={16} /> Add Photos
+                                    </Label>
+                                    <ImageUploader 
+                                        onUploadComplete={(urls) => setImageUrls(urls)} 
+                                    />
                                 </div>
                             )}
                         </CardContent>
@@ -198,7 +203,7 @@ export default function CreatePostPage() {
                                         Next <ArrowRight className="ml-2 h-4 w-4" />
                                     </Button>
                                 )}
-                                {step === 3 && (
+                                {step === 3 && user &&(
                                     <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
                                         {isSubmitting ? 'Publishing...' : 'Publish Post'}
                                     </Button>

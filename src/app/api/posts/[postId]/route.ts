@@ -1,50 +1,81 @@
+// src/app/api/posts/[postId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { initializeFirebaseAdmin } from "@/lib/firebase-admin";
 import prisma from "@/lib/prisma";
+import { initializeFirebaseAdmin } from "@/lib/firebase-admin";
 
+async function getAuthenticatedUser(request: NextRequest) {
+  const adminApp = initializeFirebaseAdmin();
+
+  // Check for Authorization header first
+  const authorization =
+    request.headers.get("authorization") ??
+    request.headers.get("Authorization");
+
+  if (authorization?.startsWith("Bearer ")) {
+    const idToken = authorization.slice("Bearer ".length);
+    try {
+      return await adminApp.auth().verifyIdToken(idToken);
+    } catch (error) {
+      console.error("❌ Error verifying Bearer token:", error);
+      return null;
+    }
+  }
+
+  // Fallback: check session cookie
+  const sessionCookie =
+    request.cookies.get("session")?.value ??
+    request.cookies.get("__session")?.value;
+
+  if (sessionCookie) {
+    try {
+      return await adminApp.auth().verifySessionCookie(sessionCookie, true);
+    } catch (error) {
+      console.error("❌ Error verifying session cookie:", error);
+      return null;
+    }
+  }
+
+  return null;
+}
+
+// -------------------------------
+// ✅ DELETE /api/posts/[postId]
+// -------------------------------
 export async function DELETE(
   request: NextRequest,
-  context: { params: Promise<{ postId: string }> } // 👈 fix
+  { params }: { params: { postId: string } }
 ) {
+  const decodedToken = await getAuthenticatedUser(request);
+
+  if (!decodedToken?.uid) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const postId = params.postId;
+
+  if (!postId) {
+    return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
+  }
+
   try {
-    const { postId } = await context.params; // 👈 must await
-
-    const admin = initializeFirebaseAdmin();
-    const authHeader = request.headers.get("authorization");
-
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const idToken = authHeader.split(" ")[1];
-    const decoded = await admin.auth().verifyIdToken(idToken);
-
-    // Find the post
     const post = await prisma.post.findUnique({
       where: { id: postId },
+      select: { authorId: true },
     });
 
     if (!post) {
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    if (post.authorId !== decoded.uid) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (post.authorId !== decodedToken.uid) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
-    // Delete it
-    await prisma.post.delete({
-      where: { id: postId },
-    });
+    await prisma.post.delete({ where: { id: postId } });
 
     return NextResponse.json({ success: true }, { status: 200 });
-  } catch (err) {
-    console.error("Delete error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  } catch (error) {
+    console.error("❌ Failed to delete post:", error);
+    return NextResponse.json({ error: "Failed to delete post." }, { status: 500 });
   }
-}
-
-// Optional: keep this for unsupported methods
-export async function GET() {
-  return NextResponse.json({ message: "Method not allowed" }, { status: 405 });
 }

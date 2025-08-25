@@ -1,5 +1,5 @@
-// File: src/lib/firebase.ts
-import { initializeApp, getApps, getApp } from "firebase/app";
+// lib/firebase.ts
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
@@ -12,9 +12,6 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-export const firebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-// Export auth + storage for reuse
+export const firebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
 export const auth = getAuth(firebaseApp);
 export const storage = getStorage(firebaseApp);
