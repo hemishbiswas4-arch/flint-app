@@ -1,3 +1,4 @@
+// src/app/community/posts/[postId]/page.tsx
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,6 +28,13 @@ async function getPost(postId: string) {
     return {
       ...post,
       images: post.images.map((img: { imageUrl: string }) => img.imageUrl),
+      comments: post.comments.map(
+        (c: typeof post.comments[number]) => ({
+          ...c,
+          createdAt: c.createdAt.toISOString(), // ✅ Date → string
+        })
+      ),
+      createdAt: post.createdAt.toISOString(), // ✅ top-level date fix
     };
   } catch (error) {
     console.error("❌ Error fetching post:", error);
