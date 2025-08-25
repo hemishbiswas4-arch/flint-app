@@ -12,6 +12,13 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-export const firebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+export const firebaseApp =
+  !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+
 export const auth = getAuth(firebaseApp);
-export const storage = getStorage(firebaseApp);
+
+// ✅ Force storage to use .firebasestorage.app endpoint
+export const storage = getStorage(
+  firebaseApp,
+  `gs://${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`
+);
