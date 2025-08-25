@@ -43,15 +43,15 @@ async function getAuthenticatedUser(request: NextRequest) {
 // -------------------------------
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { postId: string } }
+  context: { params: Promise<{ postId: string }> }
 ) {
+  const { postId } = await context.params;
+
   const decodedToken = await getAuthenticatedUser(request);
 
   if (!decodedToken?.uid) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
-
-  const postId = params.postId;
 
   if (!postId) {
     return NextResponse.json({ error: "Post ID is required" }, { status: 400 });
@@ -76,6 +76,9 @@ export async function DELETE(
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
     console.error("❌ Failed to delete post:", error);
-    return NextResponse.json({ error: "Failed to delete post." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete post." },
+      { status: 500 }
+    );
   }
 }
