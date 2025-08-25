@@ -18,7 +18,15 @@ async function getPost(postId: string) {
         places: { orderBy: { displayOrder: 'asc' } },
         comments: {
           orderBy: { createdAt: "desc" },
-          include: { user: { select: { email: true, image: true } } },
+          include: {
+            user: {
+              select: {
+                id: true,      // ✅ added so Comment.user matches type
+                email: true,
+                image: true,
+              },
+            },
+          },
         },
       },
     });
