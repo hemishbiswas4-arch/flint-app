@@ -8,11 +8,13 @@ initializeFirebaseAdmin();
 // ✅ GET /api/posts/[postId]/comments
 export async function GET(
   req: NextRequest,
-  { params }: { params: { postId: string } }
+  context: { params: Promise<{ postId: string }> }
 ) {
   try {
+    const { postId } = await context.params;
+
     const comments = await prisma.comment.findMany({
-      where: { postId: params.postId },
+      where: { postId },
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { id: true, email: true, image: true } },
@@ -32,9 +34,11 @@ export async function GET(
 // ✅ POST /api/posts/[postId]/comments
 export async function POST(
   req: NextRequest,
-  { params }: { params: { postId: string } }
+  context: { params: Promise<{ postId: string }> }
 ) {
   try {
+    const { postId } = await context.params;
+
     // 1. Auth
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -69,7 +73,7 @@ export async function POST(
       data: {
         text: body.text,
         userId: user.id,
-        postId: params.postId,
+        postId,
       },
       include: {
         user: { select: { id: true, email: true, image: true } },
