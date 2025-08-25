@@ -6,7 +6,10 @@ import { initializeFirebaseAdmin } from "@/lib/firebase-admin";
 
 initializeFirebaseAdmin();
 
-export async function POST(req: NextRequest, context: { params: Promise<{ postId: string }> }) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ postId: string }> }
+) {
   try {
     const { postId } = await context.params;
 
@@ -22,13 +25,16 @@ export async function POST(req: NextRequest, context: { params: Promise<{ postId
     console.log("[LIKE] Incoming request -> postId:", postId, "userId:", userId);
 
     // Check if like already exists
-    const existing = await prisma.postLike.findFirst({
-      where: { postId, userId },
+    const existing = await prisma.postLike.findUnique({
+      where: { userId_postId: { userId, postId } }, // ✅ composite PK lookup
     });
 
     let result;
     if (existing) {
-      result = await prisma.postLike.delete({ where: { id: existing.id } });
+      // ✅ delete using composite PK
+      result = await prisma.postLike.delete({
+        where: { userId_postId: { userId, postId } },
+      });
       console.log("[LIKE] Removed like:", result);
     } else {
       result = await prisma.postLike.create({
