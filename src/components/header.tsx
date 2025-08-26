@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User } from "firebase/auth";
-import UserDisplay from "@/components/UserDisplay"; // ✅ point to the new file
+import UserDisplay from "@/components/UserDisplay"; // ✅ fixed import
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -97,10 +97,7 @@ export default function Header({ user, isAuthLoading }: HeaderProps) {
         <div className="fixed inset-0 z-40 bg-background flex flex-col p-6 animate-in slide-in-from-top duration-200">
           <div className="flex justify-between items-center mb-8">
             <span className="font-bold text-xl">Outplann</span>
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              aria-label="Close Menu"
-            >
+            <button onClick={() => setIsMenuOpen(false)} aria-label="Close Menu">
               <X size={28} />
             </button>
           </div>
@@ -140,7 +137,6 @@ export default function Header({ user, isAuthLoading }: HeaderProps) {
             )}
           </nav>
 
-          {/* User at bottom */}
           <div className="mt-auto border-t pt-6">
             <UserDisplay user={user} loading={isAuthLoading} />
           </div>
