@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User } from "firebase/auth";
-import UserDisplay from "@/components/UserDisplay"; // ✅ fixed import
+import UserDisplay from "@/components/UserDisplay";
 import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -23,6 +23,15 @@ const navItems = [
 export default function Header({ user, isAuthLoading }: HeaderProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // ✅ Prevent background scroll when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+  }, [isMenuOpen]);
 
   const checkActive = (href: string) => {
     if (href === "/community") {
@@ -64,7 +73,9 @@ export default function Header({ user, isAuthLoading }: HeaderProps) {
               href="/account"
               className={cn(
                 "relative text-sm font-medium transition-colors hover:text-primary",
-                pathname === "/account" ? "text-primary" : "text-muted-foreground"
+                pathname === "/account"
+                  ? "text-primary"
+                  : "text-muted-foreground"
               )}
             >
               My Account
@@ -92,17 +103,15 @@ export default function Header({ user, isAuthLoading }: HeaderProps) {
         </div>
       </div>
 
-      {/* Mobile Fullscreen Menu */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-background flex flex-col p-6 animate-in slide-in-from-top duration-200">
-          <div className="flex justify-between items-center mb-8">
-            <span className="font-bold text-xl">Outplann</span>
-            <button onClick={() => setIsMenuOpen(false)} aria-label="Close Menu">
-              <X size={28} />
-            </button>
-          </div>
-
-          <nav className="flex flex-col gap-6 text-lg font-semibold">
+      {/* ✅ Mobile Drawer Menu (pushes content, not overlay) */}
+      <div
+        className={cn(
+          "md:hidden transition-all duration-300 overflow-hidden bg-background border-b",
+          isMenuOpen ? "max-h-[100vh]" : "max-h-0"
+        )}
+      >
+        <div className="flex flex-col p-6 gap-6">
+          <nav className="flex flex-col gap-4 text-lg font-semibold">
             {navItems.map((item) => {
               const isActive = checkActive(item.href);
               return (
@@ -111,7 +120,7 @@ export default function Header({ user, isAuthLoading }: HeaderProps) {
                   href={item.href}
                   onClick={() => setIsMenuOpen(false)}
                   className={cn(
-                    "block w-full py-2",
+                    "block w-full py-1",
                     isActive
                       ? "text-primary"
                       : "text-foreground hover:text-primary"
@@ -126,7 +135,7 @@ export default function Header({ user, isAuthLoading }: HeaderProps) {
                 href="/account"
                 onClick={() => setIsMenuOpen(false)}
                 className={cn(
-                  "block w-full py-2",
+                  "block w-full py-1",
                   pathname === "/account"
                     ? "text-primary"
                     : "text-foreground hover:text-primary"
@@ -137,11 +146,11 @@ export default function Header({ user, isAuthLoading }: HeaderProps) {
             )}
           </nav>
 
-          <div className="mt-auto border-t pt-6">
+          <div className="pt-4 border-t">
             <UserDisplay user={user} loading={isAuthLoading} />
           </div>
         </div>
-      )}
+      </div>
     </header>
   );
 }
