@@ -1,3 +1,4 @@
+//  src/app/components/AuthButtons.tsx
 'use client';
 
 import React from 'react';

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Share2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -38,25 +38,43 @@ export default function PostCard({ post, currentUserId }: PostCardProps) {
 
   const mainImage = post.images[0];
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/community/posts/${post.id}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: post.title,
+          text: post.textContent,
+          url,
+        });
+      } catch (err) {
+        console.log("Share cancelled", err);
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      alert("Link copied to clipboard!");
+    }
+  };
+
   return (
     <Card className="overflow-hidden flex flex-col hover:shadow-lg transition-shadow rounded-2xl">
       {/* ✅ Image */}
       {mainImage && (
         <Link
           href={`/community/posts/${post.id}`}
-          className="block bg-black max-h-64 flex items-center justify-center"
+          className="block w-full aspect-[4/3] bg-muted"
         >
           <SafeImage
             src={mainImage}
             alt={post.title}
-            className="w-full h-64 object-contain"
+            className="w-full h-full object-cover"
           />
         </Link>
       )}
 
       {/* ✅ Content */}
       <CardHeader>
-        <CardTitle className="text-xl font-semibold leading-tight">
+        <CardTitle className="text-lg sm:text-xl font-semibold leading-tight">
           <Link
             href={`/community/posts/${post.id}`}
             className="hover:text-primary transition-colors line-clamp-2"
@@ -65,7 +83,13 @@ export default function PostCard({ post, currentUserId }: PostCardProps) {
           </Link>
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Posted by {post.author.email}
+          Posted by{" "}
+          <Link
+            href={`/user/${post.author.id}`}
+            className="hover:underline hover:text-primary"
+          >
+            {post.author.email}
+          </Link>
         </p>
       </CardHeader>
 
@@ -90,6 +114,13 @@ export default function PostCard({ post, currentUserId }: PostCardProps) {
             <MessageSquare size={16} />
             <span>Comment</span>
           </Link>
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Share2 size={16} />
+            <span>Share</span>
+          </button>
         </div>
         <span className="text-xs text-muted-foreground">
           {new Date(post.createdAt).toLocaleDateString()}

@@ -6,30 +6,12 @@ import PostCard, { PostForFeed } from '@/app/components/PostCard';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { PlusCircle } from 'lucide-react';
 
 async function getPosts(): Promise<PostForFeed[]> {
   const res = await fetch('/api/posts', { cache: 'no-store' });
   if (!res.ok) throw new Error('Failed to fetch data');
   return res.json();
-}
-
-function EmptyFeed() {
-  return (
-    <div className="flex justify-center items-center py-20">
-      <Card className="w-full max-w-md text-center rounded-2xl">
-        <CardContent className="p-8">
-          <h2 className="text-2xl font-bold mb-2">No posts yet</h2>
-          <p className="text-muted-foreground mb-6">
-            Be the first to share your adventure with the community!
-          </p>
-          <Link href="/community/create">
-            <Button size="lg" className="rounded-xl">Create Your First Post</Button>
-          </Link>
-        </CardContent>
-      </Card>
-    </div>
-  );
 }
 
 export default function CommunityPage() {
@@ -44,11 +26,7 @@ export default function CommunityPage() {
         const fetchedPosts = await getPosts();
         setPosts(fetchedPosts);
       } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('An unexpected error occurred.');
-        }
+        setError(err instanceof Error ? err.message : 'Unexpected error');
       } finally {
         setIsLoading(false);
       }
@@ -60,39 +38,41 @@ export default function CommunityPage() {
     });
 
     fetchPosts();
-
     return () => unsubscribe();
   }, []);
 
   if (isLoading) {
-    return (
-      <div className="container max-w-7xl py-8">
-        <p>Loading posts...</p>
-      </div>
-    );
+    return <div className="flex justify-center py-20">Loading feed...</div>;
   }
 
   if (error) {
-    return (
-      <div className="container max-w-7xl py-8">
-        <p>Error: {error}</p>
-      </div>
-    );
+    return <div className="flex justify-center py-20 text-red-500">Error: {error}</div>;
   }
 
   return (
-    <div className="container max-w-7xl py-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Community Feed</h1>
+    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-md border-b py-3 flex justify-between items-center">
+        <h1 className="text-xl sm:text-2xl font-bold">Community</h1>
         <Link href="/community/create">
-          <Button className="rounded-xl">Create Post</Button>
+          <Button className="rounded-full flex items-center gap-2">
+            <PlusCircle size={18} /> Post
+          </Button>
         </Link>
       </div>
 
+      {/* Feed */}
       {posts.length === 0 ? (
-        <EmptyFeed />
+        <div className="text-center py-16 text-muted-foreground">
+          No posts yet — be the first to share your trip ✈️
+          <div className="mt-4">
+            <Link href="/community/create">
+              <Button>Create Post</Button>
+            </Link>
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
           {posts.map((post) => (
             <PostCard key={post.id} post={post} currentUserId={currentUserId} />
           ))}

@@ -1,3 +1,4 @@
+// src/app/components/MapComponent.tsx
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';

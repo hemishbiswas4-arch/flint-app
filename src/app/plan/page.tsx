@@ -8,9 +8,7 @@ import MapComponent from '@/app/components/MapComponent';
 import PlannerWizard from '@/app/components/PlannerWizard';
 import ItineraryPanel from '@/app/components/ItineraryPanel';
 import SignInModal from '@/app/components/SignInModal';
-import Header from '@/components/header';
 
-// --- TYPES ---
 export type ItineraryStop = {
   name: string;
   description: string;
@@ -46,29 +44,30 @@ export default function PlanPage() {
   const [selectedStopIndex, setSelectedStopIndex] = useState<number | null>(null);
   const [seenPlaces, setSeenPlaces] = useState<string[]>([]);
   const [filtersForModal, setFiltersForModal] = useState<FilterState | null>(null);
-  
+
   const [filters, setFilters] = useState<FilterState>({
     location: { name: '', lat: null, lng: null },
     radius: 15,
     groupType: 'Friends',
     duration: 'Half-day (~4 hrs)',
-    theme: 'Relaxing'
+    theme: 'Relaxing',
   });
-  
+
   const auth = getAuth(firebaseApp);
 
+  // ✅ Load Google Maps Script
   useEffect(() => {
-    const scriptId = "google-maps-script";
+    const scriptId = 'google-maps-script';
     if (window.google?.maps) {
       setMapsScriptLoaded(true);
       return;
     }
     const existingScript = document.getElementById(scriptId);
     if (existingScript) {
-        existingScript.addEventListener('load', () => setMapsScriptLoaded(true));
-        return;
+      existingScript.addEventListener('load', () => setMapsScriptLoaded(true));
+      return;
     }
-    
+
     const script = document.createElement('script');
     script.id = scriptId;
     script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places,directions`;
@@ -78,23 +77,25 @@ export default function PlanPage() {
     document.head.appendChild(script);
   }, []);
 
+  // ✅ Auth
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(currentUser => {
+    const unsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       setAuthLoading(false);
     });
     return () => unsubscribe();
   }, [auth]);
 
+  // ✅ Generate Itinerary
   const generateItinerary = async (currentFilters: FilterState, isReshuffle: boolean) => {
     if (!currentFilters.location.lat || !currentFilters.location.lng) {
-      setError("Please select a valid location.");
+      setError('Please select a valid location.');
       return;
     }
     setLoading(true);
     setError(null);
     setSelectedStopIndex(null);
-    
+
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -110,11 +111,10 @@ export default function PlanPage() {
         throw new Error(errorData.message || 'AI generation failed');
       }
       const responseData = await response.json();
-      
-      // FIX: Replaced 'any' with `unknown` and performed type checks
+
       const validStops: ItineraryStop[] = (responseData.stops as unknown[]).filter(
-        (stop): stop is ItineraryStop => 
-          typeof (stop as ItineraryStop).lat === 'number' && 
+        (stop): stop is ItineraryStop =>
+          typeof (stop as ItineraryStop).lat === 'number' &&
           typeof (stop as ItineraryStop).lng === 'number' &&
           typeof (stop as ItineraryStop).name === 'string' &&
           typeof (stop as ItineraryStop).description === 'string' &&
@@ -122,16 +122,16 @@ export default function PlanPage() {
           typeof (stop as ItineraryStop).locked === 'boolean' &&
           typeof (stop as ItineraryStop).placeId === 'string'
       );
-      
+
       setItinerary(validStops);
       const newSeen = new Set(isReshuffle ? seenPlaces : []);
-      validStops.forEach(stop => newSeen.add(stop.name));
+      validStops.forEach((stop) => newSeen.add(stop.name));
       setSeenPlaces(Array.from(newSeen));
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError("An unknown error occurred.");
+        setError('An unknown error occurred.');
       }
     } finally {
       setLoading(false);
@@ -150,59 +150,60 @@ export default function PlanPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      <Header user={user} isAuthLoading={isAuthLoading} />
-
+    <div className="flex flex-col flex-1">
       <main className="flex-1 w-full grid grid-cols-1 lg:grid-cols-[40%_60%] xl:grid-cols-[30%_70%]">
-        {/* Left Panel: Controls */}
-        <div className="border-r h-[calc(100vh-3.5rem)] overflow-y-auto">
+        {/* Left Sidebar */}
+        <div className="border-r h-screen overflow-y-auto p-4 space-y-6">
           {itinerary ? (
-            <ItineraryPanel 
-              itinerary={itinerary} 
-              setItinerary={setItinerary} 
-              selectedStopIndex={selectedStopIndex} 
-              setSelectedStopIndex={setSelectedStopIndex} 
-              onReshuffle={() => generateItinerary(filters, true)} 
-              onStartOver={handleStartOver} 
+            <ItineraryPanel
+              itinerary={itinerary}
+              setItinerary={setItinerary}
+              selectedStopIndex={selectedStopIndex}
+              setSelectedStopIndex={setSelectedStopIndex}
+              onReshuffle={() => generateItinerary(filters, true)}
+              onStartOver={handleStartOver}
               loading={loading}
               filters={filters}
             />
           ) : (
-            <PlannerWizard 
-              isMapsScriptLoaded={isMapsScriptLoaded} 
-              user={user} 
-              onGenerate={(currentFilters) => generateItinerary(currentFilters, false)} 
-              onRequireSignIn={handleRequireSignIn} 
-              loading={loading} 
-              error={error} 
+            <PlannerWizard
+              isMapsScriptLoaded={isMapsScriptLoaded}
+              user={user}
+              onGenerate={(currentFilters) => generateItinerary(currentFilters, false)}
+              onRequireSignIn={handleRequireSignIn}
+              loading={loading}
+              error={error}
               filters={filters}
               setFilters={setFilters}
             />
           )}
         </div>
 
-        {/* Right Panel: Map (hidden on mobile) */}
-        <div className="h-[calc(100vh-3.5rem)] hidden lg:block">
+        {/* Right Panel: Map */}
+        <div className="h-screen hidden lg:block">
           {isMapsScriptLoaded ? (
-            <MapComponent 
-              stops={itinerary || []} 
-              selectedStopIndex={selectedStopIndex} 
-              onMarkerClick={setSelectedStopIndex} 
+            <MapComponent
+              stops={itinerary || []}
+              selectedStopIndex={selectedStopIndex}
+              onMarkerClick={setSelectedStopIndex}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">Loading Map...</div>
+            <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+              Loading Map...
+            </div>
           )}
         </div>
       </main>
 
-      <SignInModal 
+      {/* Sign In Modal */}
+      <SignInModal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}
         onSuccess={() => {
           if (filtersForModal) {
             generateItinerary(filtersForModal, false);
           }
-        }} 
+        }}
       />
     </div>
   );

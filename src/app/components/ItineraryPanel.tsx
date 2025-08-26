@@ -1,3 +1,4 @@
+// src/app/components/ItineraryPanel.tsx
 'use client';
 
 import React from 'react';

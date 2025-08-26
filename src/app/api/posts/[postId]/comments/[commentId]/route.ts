@@ -1,3 +1,4 @@
+// src/app/api/posts/[postId]/comments/[commentId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "firebase-admin/auth";
 import prisma from "@/lib/prisma";

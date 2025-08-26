@@ -1,3 +1,4 @@
+// src/app/components/DeletePostButton.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
