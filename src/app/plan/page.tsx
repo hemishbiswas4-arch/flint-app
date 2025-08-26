@@ -8,6 +8,7 @@ import MapComponent from '@/app/components/MapComponent';
 import PlannerWizard from '@/app/components/PlannerWizard';
 import ItineraryPanel from '@/app/components/ItineraryPanel';
 import SignInModal from '@/app/components/SignInModal';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type ItineraryStop = {
   name: string;
@@ -151,47 +152,95 @@ export default function PlanPage() {
 
   return (
     <div className="flex flex-col flex-1">
-      <main className="flex-1 w-full grid grid-cols-1 lg:grid-cols-[40%_60%] xl:grid-cols-[30%_70%]">
-        {/* Left Sidebar */}
-        <div className="border-r h-screen overflow-y-auto p-4 space-y-6">
-          {itinerary ? (
-            <ItineraryPanel
-              itinerary={itinerary}
-              setItinerary={setItinerary}
-              selectedStopIndex={selectedStopIndex}
-              setSelectedStopIndex={setSelectedStopIndex}
-              onReshuffle={() => generateItinerary(filters, true)}
-              onStartOver={handleStartOver}
-              loading={loading}
-              filters={filters}
-            />
-          ) : (
-            <PlannerWizard
-              isMapsScriptLoaded={isMapsScriptLoaded}
-              user={user}
-              onGenerate={(currentFilters) => generateItinerary(currentFilters, false)}
-              onRequireSignIn={handleRequireSignIn}
-              loading={loading}
-              error={error}
-              filters={filters}
-              setFilters={setFilters}
-            />
-          )}
+      <main className="flex-1 w-full">
+        {/* 📱 Mobile: Tabs (switch between Itinerary + Map) */}
+        <div className="block lg:hidden h-screen">
+          <Tabs defaultValue="plan" className="h-full flex flex-col">
+            <TabsList className="grid grid-cols-2">
+              <TabsTrigger value="plan">📋 Plan</TabsTrigger>
+              <TabsTrigger value="map">🗺️ Map</TabsTrigger>
+            </TabsList>
+            <TabsContent value="plan" className="flex-1 overflow-y-auto p-4">
+              {itinerary ? (
+                <ItineraryPanel
+                  itinerary={itinerary}
+                  setItinerary={setItinerary}
+                  selectedStopIndex={selectedStopIndex}
+                  setSelectedStopIndex={setSelectedStopIndex}
+                  onReshuffle={() => generateItinerary(filters, true)}
+                  onStartOver={handleStartOver}
+                  loading={loading}
+                  filters={filters}
+                />
+              ) : (
+                <PlannerWizard
+                  isMapsScriptLoaded={isMapsScriptLoaded}
+                  user={user}
+                  onGenerate={(currentFilters) => generateItinerary(currentFilters, false)}
+                  onRequireSignIn={handleRequireSignIn}
+                  loading={loading}
+                  error={error}
+                  filters={filters}
+                  setFilters={setFilters}
+                />
+              )}
+            </TabsContent>
+            <TabsContent value="map" className="flex-1">
+              {isMapsScriptLoaded ? (
+                <MapComponent
+                  stops={itinerary || []}
+                  selectedStopIndex={selectedStopIndex}
+                  onMarkerClick={setSelectedStopIndex}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+                  Loading Map...
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
 
-        {/* Right Panel: Map */}
-        <div className="h-screen hidden lg:block">
-          {isMapsScriptLoaded ? (
-            <MapComponent
-              stops={itinerary || []}
-              selectedStopIndex={selectedStopIndex}
-              onMarkerClick={setSelectedStopIndex}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
-              Loading Map...
-            </div>
-          )}
+        {/* 💻 Desktop: Side-by-side layout */}
+        <div className="hidden lg:grid grid-cols-[40%_60%] xl:grid-cols-[30%_70%] h-screen">
+          <div className="border-r overflow-y-auto p-4 space-y-6">
+            {itinerary ? (
+              <ItineraryPanel
+                itinerary={itinerary}
+                setItinerary={setItinerary}
+                selectedStopIndex={selectedStopIndex}
+                setSelectedStopIndex={setSelectedStopIndex}
+                onReshuffle={() => generateItinerary(filters, true)}
+                onStartOver={handleStartOver}
+                loading={loading}
+                filters={filters}
+              />
+            ) : (
+              <PlannerWizard
+                isMapsScriptLoaded={isMapsScriptLoaded}
+                user={user}
+                onGenerate={(currentFilters) => generateItinerary(currentFilters, false)}
+                onRequireSignIn={handleRequireSignIn}
+                loading={loading}
+                error={error}
+                filters={filters}
+                setFilters={setFilters}
+              />
+            )}
+          </div>
+          <div>
+            {isMapsScriptLoaded ? (
+              <MapComponent
+                stops={itinerary || []}
+                selectedStopIndex={selectedStopIndex}
+                onMarkerClick={setSelectedStopIndex}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+                Loading Map...
+              </div>
+            )}
+          </div>
         </div>
       </main>
 
