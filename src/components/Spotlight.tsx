@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface SpotlightPlace {
   name: string;
@@ -15,10 +17,16 @@ interface SpotlightPlace {
   placeId: string;
 }
 
-export default function Spotlight({ location }: { location: { name: string; lat: number; lng: number } | null }) {
+export default function Spotlight({
+  location,
+}: {
+  location: { name: string; lat: number; lng: number } | null;
+}) {
   const [places, setPlaces] = useState<SpotlightPlace[]>([]);
   const [loading, setLoading] = useState(false);
+  const [current, setCurrent] = useState(0);
 
+  // 🔄 Fetch spotlight data
   useEffect(() => {
     if (!location?.lat || !location?.lng) return;
     const fetchData = async () => {
@@ -40,50 +48,110 @@ export default function Spotlight({ location }: { location: { name: string; lat:
     fetchData();
   }, [location]);
 
+  // ⏱ Auto-advance every 5s
+  useEffect(() => {
+    if (places.length === 0) return;
+    const timer = setInterval(() => {
+      setCurrent((prev) => (prev + 1) % places.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [places]);
+
+  const prevSlide = () =>
+    setCurrent((prev) => (prev - 1 + places.length) % places.length);
+  const nextSlide = () =>
+    setCurrent((prev) => (prev + 1) % places.length);
+
   return (
-    <section className="mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-xl font-bold">🌟 Spotlight</h2>
-        {places.length > 0 && (
-          <Button variant="ghost" size="sm">See All</Button>
-        )}
-      </div>
+    <section className="w-full max-w-2xl mx-auto py-8">
+      <h2 className="text-xl font-bold text-center mb-6">🌟 Spotlight</h2>
 
       {loading ? (
-        <p className="text-muted-foreground text-sm">Finding trending spots…</p>
+        <p className="text-muted-foreground text-center">
+          Finding trending spots…
+        </p>
       ) : places.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No spotlight places available right now.</p>
+        <p className="text-muted-foreground text-center">
+          No spotlight places available right now.
+        </p>
       ) : (
-        <div className="flex gap-4 overflow-x-auto sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-6 sm:overflow-visible">
-          {places.map((p, i) => (
-            <Card
-              key={i}
-              className="relative min-w-[240px] sm:min-w-0 overflow-hidden group hover:shadow-md transition"
+        <div className="relative">
+          {/* Animate slide */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={current}
+              initial={{ opacity: 0, scale: 0.9, x: 50 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.9, x: -50 }}
+              transition={{ duration: 0.4 }}
+              className="w-full"
             >
-              <CardContent className="p-0">
-                <div className="h-36 bg-gradient-to-br from-indigo-200 to-purple-200 flex items-center justify-center">
-                  <span className="text-muted-foreground">🌍</span>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-bold text-base mb-1">{p.name}</h3>
-                  <Badge variant="secondary" className="mb-2">{p.category}</Badge>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{p.description}</p>
-                  {p.rating && (
-                    <p className="mt-2 text-xs">⭐ {p.rating.toFixed(1)}</p>
-                  )}
-                  <Button asChild variant="link" size="sm" className="p-0 mt-1">
-                    <a
-                      href={`https://www.google.com/maps/place/?q=place_id:${p.placeId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+              <Card className="overflow-hidden rounded-2xl shadow-lg">
+                <CardContent className="p-0">
+                  <div className="h-48 bg-gradient-to-br from-indigo-300 to-purple-400 flex items-center justify-center text-5xl text-white">
+                    🌍
+                  </div>
+                  <div className="p-6">
+                    <h3 className="font-bold text-lg mb-1">
+                      {places[current].name}
+                    </h3>
+                    <Badge variant="secondary" className="mb-2">
+                      {places[current].category}
+                    </Badge>
+                    <p className="text-sm text-muted-foreground mb-2 line-clamp-3">
+                      {places[current].description}
+                    </p>
+                    {places[current].rating && (
+                      <p className="mt-1 text-xs font-medium">
+                        ⭐ {places[current].rating.toFixed(1)}
+                      </p>
+                    )}
+                    <Button
+                      asChild
+                      variant="link"
+                      size="sm"
+                      className="p-0 mt-2"
                     >
-                      Open in Maps
-                    </a>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                      <a
+                        href={`https://www.google.com/maps/place/?q=place_id:${places[current].placeId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open in Maps
+                      </a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Navigation */}
+          <button
+            onClick={prevSlide}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow hover:bg-white"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={nextSlide}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 shadow hover:bg-white"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+
+          {/* Dots */}
+          <div className="flex justify-center mt-3 gap-2">
+            {places.map((_, i) => (
+              <div
+                key={i}
+                onClick={() => setCurrent(i)}
+                className={`w-2.5 h-2.5 rounded-full cursor-pointer ${
+                  i === current ? "bg-primary" : "bg-gray-300"
+                }`}
+              />
+            ))}
+          </div>
         </div>
       )}
     </section>

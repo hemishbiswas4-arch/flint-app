@@ -12,14 +12,18 @@ interface SpotlightPlace {
   placeId: string;
 }
 
-let cached: { suggestions: SpotlightPlace[]; timestamp: number } | null = null;
+// ✅ cache per location
+let cached: Record<string, { suggestions: SpotlightPlace[]; timestamp: number }> = {};
 
 export async function POST(req: NextRequest) {
   try {
-    const { location, radius = 50 } = await req.json(); // ✅ default 50km
+    const { location, radius = 50 } = await req.json();
 
-    if (cached && Date.now() - cached.timestamp < 30 * 60 * 1000) {
-      return NextResponse.json({ suggestions: cached.suggestions });
+    // ✅ round coords so people in same city share cache
+    const key = `${location.lat.toFixed(2)},${location.lng.toFixed(2)}`;
+
+    if (cached[key] && Date.now() - cached[key].timestamp < 30 * 60 * 1000) {
+      return NextResponse.json({ suggestions: cached[key].suggestions });
     }
 
     const candidateQueries = [
@@ -88,7 +92,7 @@ ${formatted}`;
       };
     });
 
-    cached = { suggestions: enriched, timestamp: Date.now() };
+    cached[key] = { suggestions: enriched, timestamp: Date.now() };
 
     return NextResponse.json({ suggestions: enriched });
   } catch (err) {
