@@ -1,3 +1,4 @@
+
 // src/app/api/posts/[postId]/comments/[commentId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "firebase-admin/auth";
@@ -9,10 +10,10 @@ initializeFirebaseAdmin();
 // ✅ DELETE /api/posts/:postId/comments/:commentId
 export async function DELETE(
   req: NextRequest,
-  context: { params: Promise<{ postId: string; commentId: string }> }
+  { params }: { params: { postId: string; commentId: string } }
 ) {
   try {
-    const { postId, commentId } = await context.params;
+    const { postId, commentId } = params;
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -35,10 +36,14 @@ export async function DELETE(
     });
 
     // ✅ Check ownership
-    const existing = await prisma.comment.findUnique({ where: { id: commentId } });
+    const existing = await prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+
     if (!existing) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 });
     }
+
     if (existing.userId !== userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
