@@ -127,7 +127,7 @@ export default function HomePage() {
           community spotlights.
         </p>
         <Link
-          href="/plan"
+          href="community/plan"
           className="mt-6 px-6 py-3 bg-white text-black rounded-xl font-semibold hover:bg-neutral-200"
         >
           Start Planning
