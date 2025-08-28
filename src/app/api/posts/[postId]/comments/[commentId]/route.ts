@@ -10,10 +10,11 @@ initializeFirebaseAdmin();
 // ✅ DELETE /api/posts/:postId/comments/:commentId
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { postId: string; commentId: string } }
+  context: { params: Promise<{ postId: string; commentId: string }> }
 ) {
   try {
-    const { postId, commentId } = params;
+    // ⬅️ Await because params is now a Promise
+    const { postId, commentId } = await context.params;
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
