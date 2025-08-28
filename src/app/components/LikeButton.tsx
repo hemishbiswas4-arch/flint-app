@@ -1,7 +1,7 @@
 // src/app/components/LikeButton.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { getAuth } from 'firebase/auth';
 
@@ -16,9 +16,19 @@ export default function LikeButton({ postId, initialLikes, isInitiallyLiked }: L
   const [isLiked, setIsLiked] = useState(isInitiallyLiked);
   const [isLoading, setIsLoading] = useState(false);
 
+  // ✅ Keep state in sync if parent props change
+  useEffect(() => {
+    setLikes(initialLikes);
+    setIsLiked(isInitiallyLiked);
+  }, [initialLikes, isInitiallyLiked]);
+
   const handleLike = async () => {
     if (isLoading) return;
     setIsLoading(true);
+
+    // Save old state for rollback
+    const prevIsLiked = isLiked;
+    const prevLikes = likes;
 
     const newIsLiked = !isLiked;
     const newLikes = newIsLiked ? likes + 1 : likes - 1;
@@ -38,8 +48,9 @@ export default function LikeButton({ postId, initialLikes, isInitiallyLiked }: L
       });
     } catch (error) {
       console.error('Failed to update like status:', error);
-      setIsLiked(isInitiallyLiked);
-      setLikes(initialLikes);
+      // ✅ Roll back only the latest change, not all the way to initial props
+      setIsLiked(prevIsLiked);
+      setLikes(prevLikes);
     } finally {
       setIsLoading(false);
     }
@@ -48,7 +59,7 @@ export default function LikeButton({ postId, initialLikes, isInitiallyLiked }: L
   return (
     <button
       onClick={handleLike}
-      className="flex items-center gap-1 text-sm transition-colors"
+      className="flex items-center gap-1 text-sm transition-colors disabled:opacity-50"
       disabled={isLoading}
     >
       <Heart

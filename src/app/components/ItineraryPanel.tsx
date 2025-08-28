@@ -1,8 +1,9 @@
+//src/app/components/ItineraryPanel.tsx
 'use client';
 
 import React from 'react';
 import { Lock, Unlock, RefreshCcw, ArrowLeft, ExternalLink } from 'lucide-react';
-import { ItineraryStop, FilterState } from '../plan/page';
+import { ItineraryStop, FilterState } from '../community/plan/page';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from "@/components/ui/badge";

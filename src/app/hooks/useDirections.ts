@@ -1,6 +1,6 @@
 // File: src/app/hooks/useDirections.ts
 import { useState, useEffect } from 'react';
-import { ItineraryStop } from '../plan/page';
+import { ItineraryStop } from '../community/plan/page';
 
 export const useDirections = (stops: ItineraryStop[]) => {
     const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);

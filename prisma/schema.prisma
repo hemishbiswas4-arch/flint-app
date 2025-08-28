@@ -1,5 +1,4 @@
-// file: prisma/schema.prisma
-
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -18,10 +17,21 @@ model User {
   image         String?
   usageCount    Int         @default(10) @map("usageCount")
 
+  // ✅ New profile fields
+  username    String?   @unique
+  bio         String?   @db.Text
+  coverPhoto  String?
+
   // Relations
   posts     Post[]
   likes     PostLike[]
   comments  Comment[]
+
+  // ✅ New relations
+  followers     Follow[]       @relation("UserFollowers")
+  following     Follow[]       @relation("UserFollowing")
+  conversations Conversation[] @relation("UserConversations")
+  messages      Message[]      @relation("UserMessages")
 
   @@map("users")
 }
@@ -94,25 +104,55 @@ model PostImage {
 }
 
 model PostLike {
-  createdAt DateTime @default(now())
-
   userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   postId String
-  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User @relation(fields: [userId], references: [id])
+  post   Post @relation(fields: [postId], references: [id])
 
-  @@id([userId, postId]) // ✅ prevents duplicate likes
+  @@id([userId, postId]) // ✅ composite key (no need for extra id column)
 }
 
 model Comment {
   id        String   @id @default(uuid())
-  text      String
+  text      String   // expose `text` to code, keep DB column as "content"
+  createdAt DateTime @default(now())
+  postId    String
+  userId    String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ## NEW SOCIAL FEATURES ##
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
 
-  userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([followerId, followingId]) // prevent duplicate follows
+}
 
-  postId String
-  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+model Conversation {
+  id        String    @id @default(uuid())
+  createdAt DateTime  @default(now())
+
+  users     User[]    @relation("UserConversations")
+  messages  Message[]
+}
+
+model Message {
+  id            String     @id @default(uuid())
+  text          String
+  createdAt     DateTime   @default(now())
+
+  senderId      String
+  sender        User       @relation("UserMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 }

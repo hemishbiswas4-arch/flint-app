@@ -1,11 +1,11 @@
+//src/components/header.tsx
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { User } from "firebase/auth";
 import UserDisplay from "@/components/UserDisplay";
-import { Menu, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Home, Users, Map, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface HeaderProps {
@@ -13,144 +13,127 @@ interface HeaderProps {
   isAuthLoading: boolean;
 }
 
-const navItems = [
-  { name: "Home", href: "/home" },
-  { name: "Plan", href: "/plan" },
-  { name: "Community", href: "/community" },
-  { name: "Create", href: "/community/create" },
-];
-
 export default function Header({ user, isAuthLoading }: HeaderProps) {
   const pathname = usePathname();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  // ✅ Prevent background scroll when menu is open
-  useEffect(() => {
-    if (isMenuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-  }, [isMenuOpen]);
 
   const checkActive = (href: string) => {
-    if (href === "/community") {
-      return pathname === "/community";
+    if (href === "/") {
+      return pathname === "/";
     }
-    return pathname.startsWith(href);
+    if (href === "/community") {
+      return (
+        pathname === "/community" ||
+        pathname.startsWith("/community/feed") ||
+        pathname.startsWith("/community/posts")
+      );
+    }
+    if (href === "/community/plan") {
+      return pathname.startsWith("/community/plan");
+    }
+    if (href === "/community/user") {
+      return pathname.startsWith("/community/user");
+    }
+    return false;
   };
 
+  const navItems = [
+    { name: "Home", href: "/", icon: Home },
+    { name: "Community", href: "/community", icon: Users },
+    { name: "Plan", href: "/community/plan", icon: Map },
+  ];
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/home" className="font-bold text-2xl tracking-tight">
-          Outplann
-        </Link>
+    <>
+      {/* Desktop Header */}
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 hidden md:block">
+        <div className="container h-16 flex items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="font-bold text-2xl tracking-tight">
+            Outplann
+          </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex gap-6">
-          {navItems.map((item) => {
-            const isActive = checkActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "relative text-sm font-medium transition-colors hover:text-primary",
-                  isActive ? "text-primary" : "text-muted-foreground"
-                )}
-              >
-                {item.name}
-                {isActive && (
-                  <span className="absolute left-0 -bottom-1 h-[2px] w-full bg-primary rounded-full"></span>
-                )}
-              </Link>
-            );
-          })}
-          {user && (
-            <Link
-              href="/account"
-              className={cn(
-                "relative text-sm font-medium transition-colors hover:text-primary",
-                pathname === "/account"
-                  ? "text-primary"
-                  : "text-muted-foreground"
-              )}
-            >
-              My Account
-              {pathname === "/account" && (
-                <span className="absolute left-0 -bottom-1 h-[2px] w-full bg-primary rounded-full"></span>
-              )}
-            </Link>
-          )}
-        </nav>
-
-        {/* Desktop User */}
-        <div className="hidden md:flex items-center gap-4">
-          <UserDisplay user={user} loading={isAuthLoading} />
-        </div>
-
-        {/* Mobile Menu Button */}
-        <div className="md:hidden">
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-2 rounded-md hover:bg-muted"
-            aria-label="Toggle Menu"
-          >
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </div>
-      </div>
-
-      {/* ✅ Mobile Drawer Menu (pushes content, not overlay) */}
-      <div
-        className={cn(
-          "md:hidden transition-all duration-300 overflow-hidden bg-background border-b",
-          isMenuOpen ? "max-h-[100vh]" : "max-h-0"
-        )}
-      >
-        <div className="flex flex-col p-6 gap-6">
-          <nav className="flex flex-col gap-4 text-lg font-semibold">
+          {/* Desktop Nav */}
+          <nav className="flex gap-6">
             {navItems.map((item) => {
               const isActive = checkActive(item.href);
+              const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setIsMenuOpen(false)}
                   className={cn(
-                    "block w-full py-1",
-                    isActive
-                      ? "text-primary"
-                      : "text-foreground hover:text-primary"
+                    "relative text-sm font-medium transition-colors hover:text-primary flex items-center gap-1",
+                    isActive ? "text-primary" : "text-muted-foreground"
                   )}
                 >
+                  <Icon size={16} />
                   {item.name}
+                  {isActive && (
+                    <span className="absolute left-0 -bottom-1 h-[2px] w-full bg-primary rounded-full"></span>
+                  )}
                 </Link>
               );
             })}
             {user && (
               <Link
-                href="/account"
-                onClick={() => setIsMenuOpen(false)}
+                href={`/community/user/${user.uid}`}
                 className={cn(
-                  "block w-full py-1",
-                  pathname === "/account"
+                  "relative text-sm font-medium transition-colors hover:text-primary flex items-center gap-1",
+                  checkActive("/community/user")
                     ? "text-primary"
-                    : "text-foreground hover:text-primary"
+                    : "text-muted-foreground"
                 )}
               >
-                My Account
+                <UserIcon size={16} />
+                My Profile
+                {checkActive("/community/user") && (
+                  <span className="absolute left-0 -bottom-1 h-[2px] w-full bg-primary rounded-full"></span>
+                )}
               </Link>
             )}
           </nav>
 
-          <div className="pt-4 border-t">
+          {/* Desktop User */}
+          <div className="flex items-center gap-4">
             <UserDisplay user={user} loading={isAuthLoading} />
           </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      {/* Mobile Footer Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex justify-around md:hidden py-2">
+        {navItems.map((item) => {
+          const isActive = checkActive(item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center text-xs font-medium transition-colors",
+                isActive ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <Icon size={22} />
+              {item.name}
+            </Link>
+          );
+        })}
+        {user && (
+          <Link
+            href={`/community/user/${user.uid}`}
+            className={cn(
+              "flex flex-col items-center text-xs font-medium transition-colors",
+              checkActive("/community/user")
+                ? "text-primary"
+                : "text-muted-foreground"
+            )}
+          >
+            <UserIcon size={22} />
+            Profile
+          </Link>
+        )}
+      </nav>
+    </>
   );
 }

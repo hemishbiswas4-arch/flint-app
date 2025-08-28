@@ -1,4 +1,5 @@
 // src/app/api/posts/route.ts
+// src/app/api/posts/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { initializeFirebaseAdmin } from "@/lib/firebase-admin";
 import prisma from "@/lib/prisma";
@@ -22,6 +23,7 @@ interface PostRequestData {
 async function getAuthenticatedUser(request: NextRequest) {
   const adminApp = initializeFirebaseAdmin();
 
+  // Session cookie first
   const sessionCookie =
     request.cookies.get("session")?.value ??
     request.cookies.get("__session")?.value;
@@ -34,9 +36,9 @@ async function getAuthenticatedUser(request: NextRequest) {
     }
   }
 
+  // Authorization header fallback
   const authorization =
-    request.headers.get("authorization") ??
-    request.headers.get("Authorization");
+    request.headers.get("authorization") ?? request.headers.get("Authorization");
 
   if (authorization?.startsWith("Bearer ")) {
     const idToken = authorization.slice("Bearer ".length);
@@ -58,7 +60,14 @@ export async function GET() {
   try {
     const posts = await prisma.post.findMany({
       include: {
-        author: { select: { id: true, email: true, image: true } },
+        author: {
+          select: {
+            id: true,
+            email: true,
+            username: true, // ✅ include username
+            image: true,
+          },
+        },
         images: { select: { imageUrl: true } },
         likes: { select: { userId: true } },
         comments: {
@@ -66,7 +75,14 @@ export async function GET() {
             id: true,
             text: true,
             createdAt: true,
-            user: { select: { id: true, email: true, image: true } },
+            user: {
+              select: {
+                id: true,
+                email: true,
+                username: true, // ✅ include username for comment authors
+                image: true,
+              },
+            },
           },
         },
         _count: { select: { likes: true, comments: true } },
@@ -74,10 +90,7 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    // Explicitly type only what we need to avoid implicit `any`
-    const postsWithFlatImages = (
-      posts as Array<{ images: Array<{ imageUrl: string }> }>
-    ).map((post) => ({
+    const postsWithFlatImages = posts.map((post) => ({
       ...post,
       images: post.images.map((img) => img.imageUrl),
     }));
@@ -105,7 +118,7 @@ export async function POST(request: NextRequest) {
   const firebaseUid = decodedToken.uid;
   const email = decodedToken.email ?? "";
 
-  // Safer extraction without `any`
+  // Safer extraction
   const picture =
     typeof (decodedToken as { picture?: unknown }).picture === "string"
       ? (decodedToken as { picture: string }).picture
@@ -122,35 +135,24 @@ export async function POST(request: NextRequest) {
     const body: PostRequestData = await request.json();
     const { title, textContent, places = [], images = [] } = body;
 
-    console.log(
-      "📩 Incoming POST /api/posts body:",
-      JSON.stringify(body, null, 2)
-    );
-
     if (!title || !textContent) {
-      console.error("❌ Missing title or textContent:", { title, textContent });
       return NextResponse.json(
         { error: "Title and text content are required." },
         { status: 400 }
       );
     }
 
-    // Handle images flexibly (string[] or { imageUrl }[])
+    // Normalize images
     let validImages: string[] = [];
-
     if (Array.isArray(images)) {
       if (typeof images[0] === "string") {
-        validImages = (images as string[]).filter(
-          (url) => !!url && url.trim().length > 0
-        );
+        validImages = (images as string[]).filter((url) => !!url?.trim());
       } else {
         validImages = (images as { imageUrl?: string | null }[])
           .map((img) => img?.imageUrl?.trim())
           .filter((url): url is string => !!url && url.length > 0);
       }
     }
-
-    console.log("🖼️ Valid images to insert:", validImages);
 
     const newPost = await prisma.post.create({
       data: {
@@ -171,13 +173,18 @@ export async function POST(request: NextRequest) {
         },
       },
       include: {
-        author: { select: { id: true, email: true, image: true } },
+        author: {
+          select: {
+            id: true,
+            email: true,
+            username: true, // ✅ include username
+            image: true,
+          },
+        },
         images: true,
         places: true,
       },
     });
-
-    console.log("✅ Post created with ID:", newPost.id);
 
     return NextResponse.json(newPost, { status: 201 });
   } catch (error) {

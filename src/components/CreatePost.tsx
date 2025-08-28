@@ -1,3 +1,4 @@
+// src/components/CreatePost.tsx
 "use client";
 
 import { useState } from "react";
@@ -7,7 +8,7 @@ import { auth } from "@/lib/firebase";
 export default function CreatePost() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [images, setImages] = useState<string[]>([]); // ✅ array of URLs
+  const [images, setImages] = useState<string[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,8 +20,8 @@ export default function CreatePost() {
 
     const payload = {
       title,
-      textContent: content,
-      images: images.map((url) => ({ imageUrl: url })), // ✅ correct format
+      content, // ✅ renamed
+      images: images.map((url) => ({ url })), // ✅ renamed
     };
 
     console.log("🚀 Sending post payload:", JSON.stringify(payload, null, 2));
@@ -62,12 +63,10 @@ export default function CreatePost() {
         className="border p-2 w-full"
       />
 
-      {/* ✅ Only render uploader if logged in */}
       {auth.currentUser && (
         <ImageUploader onUploadComplete={(urls: string[]) => setImages(urls)} />
       )}
 
-      {/* ✅ Preview multiple */}
       {images.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
           {images.map((url, i) => (

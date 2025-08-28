@@ -1,3 +1,5 @@
+// src/app/community/posts/[postId]/page.tsx
+// src/app/community/posts/[postId]/page.tsx
 import prisma from '@/lib/prisma';
 import { notFound } from 'next/navigation';
 import Link from "next/link";
@@ -13,14 +15,14 @@ async function getPost(postId: string) {
     const post = await prisma.post.findUnique({
       where: { id: postId },
       include: {
-        author: { select: { id: true, email: true, image: true } },
+        author: { select: { id: true, username: true, email: true, image: true } },
         images: { select: { imageUrl: true } },
         places: { orderBy: { displayOrder: 'asc' } },
         comments: {
           orderBy: { createdAt: "desc" },
           include: {
             user: {
-              select: { id: true, email: true, image: true },
+              select: { id: true, username: true, email: true, image: true },
             },
           },
         },
@@ -104,16 +106,20 @@ export default async function SinglePostPage(
           {/* Author + Date (Clickable Profile) */}
           <div className="flex items-center gap-3 mb-6 text-sm text-muted-foreground">
             <Link
-              href={`/user/${post.author.id}`}
+              href={`/community/user/${post.author.id}`}
               className="flex items-center gap-2 hover:text-primary transition-colors"
             >
               <Avatar className="h-8 w-8">
                 <AvatarImage src={post.author.image || undefined} />
                 <AvatarFallback>
-                  {post.author.email?.[0].toUpperCase()}
+                  {post.author.username?.[0]?.toUpperCase() ??
+                   post.author.email?.[0]?.toUpperCase() ??
+                   "U"}
                 </AvatarFallback>
               </Avatar>
-              <span className="font-medium">{post.author.email}</span>
+              <span className="font-medium">
+                {post.author.username || post.author.email}
+              </span>
             </Link>
             <span>•</span>
             <span>{new Date(post.createdAt).toLocaleDateString()}</span>
@@ -130,7 +136,7 @@ export default async function SinglePostPage(
               Comments ({post.comments.length})
             </h2>
 
-            {/* ✅ Pass clickable authors to CommentSection */}
+            {/* ✅ CommentSection already receives user info */}
             <CommentSection postId={post.id} initialComments={post.comments} />
           </div>
         </div>

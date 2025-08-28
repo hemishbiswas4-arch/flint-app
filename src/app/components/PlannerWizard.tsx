@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
 import { Sparkles } from 'lucide-react';
-import { FilterState, LocationState } from '../plan/page';
+import { FilterState, LocationState } from '../community/plan/page';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

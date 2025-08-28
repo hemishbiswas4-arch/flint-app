@@ -3,7 +3,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import { useDirections } from '../hooks/useDirections';
-import { ItineraryStop } from '../plan/page';
+import { ItineraryStop } from '../community/plan/page';
 
 type MapComponentProps = {
   stops: ItineraryStop[];
