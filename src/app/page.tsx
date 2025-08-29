@@ -202,7 +202,7 @@ export default function HomePage() {
       {/* ✅ Mobile bottom nav (only visible after sign-in, 2 icons only) */}
       {user && (
         <div className="md:hidden px-8 py-16 flex justify-around bg-white border-t">
-          <Link href="/plan" className="flex flex-col items-center">
+          <Link href="community/plan" className="flex flex-col items-center">
             <div className="w-16 h-16 rounded-full border flex items-center justify-center mb-2">
               <Compass size={24} />
             </div>
