@@ -1,7 +1,6 @@
 // src/app/page.tsx
-// Static landing page — masthead now includes a subtle dotted world map (CSS-only; no SVGs/images)
-
-import Link from "next/link";
+// Clean, production-ready static landing page for Outplann
+// No stray tokens, no SVGs, no runtime errors (TypeScript-friendly)
 
 export const metadata = {
   title: "Outplann — Scrapbooks · Maps · Memory",
@@ -28,36 +27,18 @@ const features = [
 ];
 
 export default function LandingPage() {
-  // CSS string for the dotted "world" motif — many small radial-gradients positioned around the masthead.
-  const dottedWorld = `
-    radial-gradient(circle at 12% 35%, rgba(17,24,39,0.07) 0.6px, transparent 1.4px),
-    radial-gradient(circle at 18% 42%, rgba(17,24,39,0.07) 0.6px, transparent 1.4px),
-    radial-gradient(circle at 25% 38%, rgba(17,24,39,0.06) 0.6px, transparent 1.4px),
-    radial-gradient(circle at 30% 45%, rgba(17,24,39,0.06) 0.6px, transparent 1.4px),
-    radial-gradient(circle at 36% 32%, rgba(17,24,39,0.05) 0.6px, transparent 1.4px),
-
-    radial-gradient(circle at 55% 28%, rgba(17,24,39,0.06) 0.6px, transparent 1.4px),
-    radial-gradient(circle at 62% 34%, rgba(17,24,39,0.07) 0.6px, transparent 1.4px),
-    radial-gradient(circle at 68% 24%, rgba(17,24,39,0.06) 0.6px, transparent 1.4px),
-
-    radial-gradient(circle at 45% 60%, rgba(17,24,39,0.05) 0.6px, transparent 1.4px),
-    radial-gradient(circle at 52% 66%, rgba(17,24,39,0.06) 0.6px, transparent 1.4px),
-    radial-gradient(circle at 60% 58%, rgba(17,24,39,0.05) 0.6px, transparent 1.4px),
-
-    radial-gradient(circle at 78% 50%, rgba(17,24,39,0.04) 0.6px, transparent 1.4px),
-    radial-gradient(circle at 82% 60%, rgba(17,24,39,0.04) 0.6px, transparent 1.4px),
-
-    radial-gradient(circle at 8% 68%, rgba(17,24,39,0.03) 0.6px, transparent 1.4px),
-    radial-gradient(circle at 20% 72%, rgba(17,24,39,0.03) 0.6px, transparent 1.4px)
-  `;
+  // dotted world motif (CSS string) applied to masthead via inline style
+  const dottedWorld = [
+    "radial-gradient(circle at 12% 35%, rgba(17,24,39,0.07) 0.6px, transparent 1.4px)",
+    "radial-gradient(circle at 62% 34%, rgba(17,24,39,0.07) 0.6px, transparent 1.4px)",
+  ].join(", ");
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-neutral-50 to-neutral-100 text-neutral-900 antialiased">
-      {/* SLIM MASTHEAD with subtle dotted world-map background (CSS-only) */}
+      {/* Masthead with subtle dotted motif */}
       <div
         className="w-full bg-white/85 backdrop-blur sticky top-0 z-50 border-b border-neutral-200"
         style={{
-          // place the dotted motif inside a pseudo-layer via backgroundImage
           backgroundImage: dottedWorld,
           backgroundRepeat: "no-repeat",
           backgroundSize: "100% 100%",
@@ -73,7 +54,6 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Clean text CTA (no SVG/image) */}
             <a
               href="https://apps.apple.com/in/app/outplann/id6753912652"
               target="_blank"
@@ -89,7 +69,6 @@ export default function LandingPage() {
 
       {/* HERO */}
       <section className="relative overflow-hidden">
-        {/* subtle non-SVG background handled via CSS radial gradients */}
         <div
           aria-hidden
           className="absolute inset-0 -z-10 pointer-events-none"
@@ -101,7 +80,6 @@ export default function LandingPage() {
 
         <div className="max-w-7xl mx-auto px-6 md:px-12 py-20 md:py-28">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            {/* Left column: headline + copy */}
             <div className="max-w-2xl">
               <h1 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
                 Map the life you want to remember.
@@ -137,25 +115,20 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right column: CSS-only map mock (no SVGs) */}
+            {/* CSS-only map mock */}
             <div className="flex items-center justify-center">
               <div className="w-full max-w-md rounded-3xl bg-white/90 p-6 shadow-2xl border border-white/60">
-                {/* CSS map canvas */}
                 <div className="relative h-56 rounded-lg overflow-hidden bg-gradient-to-tr from-rose-100 via-indigo-100 to-sky-50">
-                  {/* faint paths (using rotated divs) */}
                   <div className="absolute left-[-10%] top-[18%] w-[120%] h-1 bg-gradient-to-r from-transparent via-purple-300 to-transparent opacity-40 rounded-full transform rotate-6" />
                   <div className="absolute left-[-5%] top-[45%] w-[110%] h-1 bg-gradient-to-r from-transparent via-pink-300 to-transparent opacity-30 rounded-full transform -rotate-3" />
                   <div className="absolute left-0 top-[70%] w-[100%] h-1 bg-gradient-to-r from-transparent via-cyan-300 to-transparent opacity-25 rounded-full transform rotate-2" />
 
-                  {/* pins (pure divs) */}
                   <div className="absolute w-10 h-10 rounded-full bg-white left-[72%] top-[20%] grid place-items-center">
                     <div className="w-4 h-4 rounded-full bg-violet-600 shadow-[0_6px_18px_rgba(124,58,237,0.25)]" />
                   </div>
-
                   <div className="absolute w-10 h-10 rounded-full bg-white left-[37%] top-[12%] grid place-items-center">
                     <div className="w-4 h-4 rounded-full bg-rose-500 shadow-[0_6px_18px_rgba(251,113,133,0.18)]" />
                   </div>
-
                   <div className="absolute w-10 h-10 rounded-full bg-white left-[58%] top-[65%] grid place-items-center">
                     <div className="w-4 h-4 rounded-full bg-cyan-500 shadow-[0_6px_18px_rgba(6,182,212,0.18)]" />
                   </div>
@@ -184,73 +157,72 @@ export default function LandingPage() {
         </p>
       </section>
 
-      {/* MEMORY GRAPH */}
+      {/* MEMORY GRAPH + HORIZONTAL 'INTELLIGENCE' CAPSULES */}
       <section id="learn-more" className="container mx-auto px-6 md:px-12 py-12">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-          <div className="md:col-span-2 space-y-6">
-            <h2 className="text-2xl md:text-3xl font-bold">The Memory Graph</h2>
-            <p className="text-neutral-600">
-              A simple, humane flow that organises life’s fragments into a single coherent view.
-            </p>
+        <div className="max-w-6xl mx-auto space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            <div className="md:col-span-2 space-y-4">
+              <h2 className="text-2xl md:text-3xl font-bold">The Memory Graph</h2>
+              <p className="text-neutral-600">
+                A simple, humane flow that organises life’s fragments into a single coherent view.
+              </p>
+            </div>
 
-            <ol className="space-y-4">
-              <li className="flex items-start gap-4">
-                <div className="flex-none w-10 h-10 rounded-xl bg-black text-white grid place-items-center font-semibold">1</div>
-                <div>
-                  <div className="font-semibold">Create Scrapbooks</div>
-                  <div className="text-sm text-neutral-600">Moment pages with photos, captions and mood tags.</div>
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <div className="flex-none w-10 h-10 rounded-xl bg-black text-white grid place-items-center font-semibold">2</div>
-                <div>
-                  <div className="font-semibold">Scrapbooks → Pins</div>
-                  <div className="text-sm text-neutral-600">Auto-detected place, inferred vibe and timestamps.</div>
-                </div>
-              </li>
-              <li className="flex items-start gap-4">
-                <div className="flex-none w-10 h-10 rounded-xl bg-black text-white grid place-items-center font-semibold">3</div>
-                <div>
-                  <div className="font-semibold">Pins → Map</div>
-                  <div className="text-sm text-neutral-600">A living map that scales from neighbourhoods to continents.</div>
-                </div>
-              </li>
-            </ol>
+            <aside className="rounded-2xl p-6 bg-white shadow-lg border border-neutral-100">
+              <h3 className="font-semibold mb-2">Outplann Intelligence</h3>
+              <p className="text-sm text-neutral-600 mb-3">
+                Lightweight AI that organises scrapbooks into pins, categories and map-driven discovery — working quietly in the background.
+              </p>
+              <div className="text-xs text-neutral-500">Swipe to explore →</div>
+            </aside>
           </div>
 
-          {/* Intelligence panel */}
-          <aside className="rounded-2xl p-6 bg-white shadow-lg border border-neutral-100">
-            <h3 className="font-semibold mb-2">Soft intelligence</h3>
-            <p className="text-sm text-neutral-600 mb-4">
-              Gentle, local inference that organises memories without ever feeling intrusive.
-            </p>
+          <div className="overflow-x-auto no-scrollbar scroll-pl-6 -mx-6 px-6" aria-label="Outplann Intelligence features">
+            <div className="flex gap-4 pb-4" role="list">
+              <article role="listitem" className="min-w-[280px] flex-shrink-0 rounded-2xl p-6 bg-white shadow-md border border-neutral-100">
+                <h4 className="font-semibold mb-2">Smart place detection</h4>
+                <p className="text-sm text-neutral-600 mb-3">
+                  Automatically identifies cities, restaurants, cafés, hotels and landmarks from your scrapbook — every place becomes a pin.
+                </p>
+                <ul className="text-xs text-neutral-500 space-y-1">
+                  <li>Auto pin creation from scrapbook locations</li>
+                  <li>Reverse lookup to fill place meta</li>
+                </ul>
+              </article>
 
-            <div className="grid gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-sm bg-neutral-200 grid place-items-center text-xs">P</div>
-                <div>
-                  <div className="text-sm font-medium">Auto-place</div>
-                  <div className="text-xs text-neutral-500">Reverse lookups & time context</div>
-                </div>
-              </div>
+              <article role="listitem" className="min-w-[280px] flex-shrink-0 rounded-2xl p-6 bg-white shadow-md border border-neutral-100">
+                <h4 className="font-semibold mb-2">Vibe & category understanding</h4>
+                <p className="text-sm text-neutral-600 mb-3">
+                  Infers mood and category (food, cafés, nightlife, nature, culture, stays) so your profile categories and filters are auto-populated.
+                </p>
+                <div className="text-xs text-neutral-500">Helps surface relevant scrapbooks in discovery and search.</div>
+              </article>
 
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-sm bg-neutral-200 grid place-items-center text-xs">V</div>
-                <div>
-                  <div className="text-sm font-medium">Vibe tags</div>
-                  <div className="text-xs text-neutral-500">Mood inferred from captions & visuals</div>
-                </div>
-              </div>
+              <article role="listitem" className="min-w-[280px] flex-shrink-0 rounded-2xl p-6 bg-white shadow-md border border-neutral-100">
+                <h4 className="font-semibold mb-2">Auto-organised scrapbooks</h4>
+                <p className="text-sm text-neutral-600 mb-3">
+                  Photos, captions and mood tags are used to sort scrapbooks into profile sections, map layers and discovery feeds — minimal manual tagging required.
+                </p>
+                <div className="text-xs text-neutral-500">Cleaner profiles, smarter maps.</div>
+              </article>
 
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-sm bg-neutral-200 grid place-items-center text-xs">M</div>
-                <div>
-                  <div className="text-sm font-medium">Map-first</div>
-                  <div className="text-xs text-neutral-500">Profiles that show where you’ve lived</div>
-                </div>
-              </div>
+              <article role="listitem" className="min-w-[280px] flex-shrink-0 rounded-2xl p-6 bg-white shadow-md border border-neutral-100">
+                <h4 className="font-semibold mb-2">Pin intelligence (Geo-memory)</h4>
+                <p className="text-sm text-neutral-600 mb-3">
+                  Each pin stores photos, text memory, mood, date/time and optional weather — turning locations into rich memory objects.
+                </p>
+                <div className="text-xs text-neutral-500">View memories by place, not only by time.</div>
+              </article>
+
+              <article role="listitem" className="min-w-[280px] flex-shrink-0 rounded-2xl p-6 bg-white shadow-md border border-neutral-100">
+                <h4 className="font-semibold mb-2">Discovery & suggestions</h4>
+                <p className="text-sm text-neutral-600 mb-3">
+                  Based on pins and user maps, Outplann suggests similar places, journeys and community scrapbooks that align with your map patterns.
+                </p>
+                <div className="text-xs text-neutral-500">Personalised, map-driven discovery.</div>
+              </article>
             </div>
-          </aside>
+          </div>
         </div>
       </section>
 
